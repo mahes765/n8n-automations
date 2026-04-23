@@ -1,0 +1,1238 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "message": "=Silakan masukan penyesuaian untuk data yang ingin diperbarui. \n\n- *Judul:* {{ $('Extract Expense Information').item.json.output.description }}\n- *Jumlah:* Rp {{ $('Extract Expense Information').item.json.output.amount }}\n- *Tanggal:* {{ $('Extract Expense Information').item.json.output.date }}\n- *Merchant:* {{ $('Extract Expense Information').item.json.output.merchant }}\n- *Kategori:* {{ $('Extract Expense Information').item.json.output.category }}\n- *Wallet:* {{ $('Extract Expense Information').item.json.output.wallet }}\n- *Project:* {{ $('Extract Expense Information').item.json.output.Project }}\n- *Catatan:* {{ $('Extract Expense Information').item.json.output.Notes }}\n- *Item belanjaan:* {{ $('Extract Expense Information').item.json.output.massage_text }}\n\nKirimkan data yang perlu diperbaiki dengan format:\n\n`Judul: nilai baru, Jumlah: nilai baru, kategori: nilai baru`\n\nContoh: `Judul: Makan siang, Jumlah: 50000`",
+        "responseType": "freeText",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3040,
+        2736
+      ],
+      "id": "1f724b68-a09c-4ae1-b85d-94f5852a7b44",
+      "name": "Send a text message",
+      "webhookId": "9afed1d8-9dd0-4083-b897-a00d949eefa3",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "2bc9ba51-f77e-4207-b045-acc07b93cafe",
+      "name": "Merge All Text Sources",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1792,
+        2624
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "extractedText",
+              "value": "={{ $json.inputData }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "330feb00-2fb4-448d-9ab5-5a365da41e58",
+      "name": "Prepare Text Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1568,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.extractedText }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "amount",
+              "type": "number",
+              "description": "Extract all monetary values in Indonesian Rupiah from the text (e.g., \"50rb\", \"50ribu\", \"Rp 50.000\"), convert each into a numeric value, and return the total sum.",
+              "required": true
+            },
+            {
+              "name": "description",
+              "description": "Brief description of the expense or purchase",
+              "required": true
+            },
+            {
+              "name": "date",
+              "type": "date",
+              "description": "Date of purchase in YYYY-MM-DD format. If not found in text, use today's date"
+            },
+            {
+              "name": "merchant",
+              "description": "Store or merchant name where purchase was made"
+            },
+            {
+              "name": "category",
+              "description": "Expense category (Groceries, Payroll, Operational Fix Cost, Operational Variabel Cost)"
+            },
+            {
+              "name": "items",
+              "description": "List each purchased item and its price on a new line"
+            },
+            {
+              "name": "Notes",
+              "description": "Warranty details or a brief justification for the purchase"
+            },
+            {
+              "name": "Type",
+              "description": "Analyze the given input and classify it as either an \"expense\" or \"income\" category."
+            },
+            {
+              "name": "massage_text",
+              "description": "List each purchased item followed by its price in parentheses, separated by commas. Format: Item (Price), Item (Price)"
+            },
+            {
+              "name": "wallet",
+              "description": "Categorize wallet types from the text: Cash, Digital Bank, or Traditional Bank."
+            },
+            {
+              "name": "Company",
+              "description": "Classify the company entity from the text as either {dako} or {dako_studio}. If no company is mentioned, return {dako}. Provide the result only"
+            },
+            {
+              "name": "Project",
+              "description": "Identify and list all projects mentioned in the text. If none are found, return 'null' or an empty string."
+            }
+          ]
+        },
+        "options": {
+          "systemPromptTemplate": "You are an expert data extraction system. Return ONLY valid JSON without any markdown formatting, code blocks, or additional text. Do not wrap the response in ```json or ``` tags."
+        }
+      },
+      "id": "5bda6d2a-047b-4849-aba2-e1154881959e",
+      "name": "Extract Expense Information",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        2240,
+        2640
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "3275e83d-e4d3-80f3-9308-d7c9b48989da",
+          "mode": "list",
+          "cachedResultName": "Financial Management System",
+          "cachedResultUrl": "https://www.notion.so/3275e83de4d380f39308d7c9b48989da"
+        },
+        "title": "={{ $json.title }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Amount (Rp)|number",
+              "type": "number",
+              "numberValue": "={{ $json.amount }}"
+            },
+            {
+              "key": "Date|date",
+              "type": "date",
+              "date": "={{ $json.date }}",
+              "timezone": "={{ $json.date }}"
+            },
+            {
+              "key": "Merchant|rich_text",
+              "type": "rich_text",
+              "textContent": "={{ $json.merchant }}"
+            },
+            {
+              "key": "Category|select",
+              "type": "select",
+              "selectValue": "={{ $json.category }}"
+            },
+            {
+              "key": "Items|rich_text",
+              "type": "rich_text",
+              "textContent": "={{ $json.items }}"
+            },
+            {
+              "key": "Notes|rich_text",
+              "textContent": "={{ $json.notes }}"
+            },
+            {
+              "key": "Transaction Type|select",
+              "selectValue": "={{ $json.type }}"
+            },
+            {
+              "key": "Wallet|rich_text",
+              "textContent": "={{ $json.wallet }}"
+            },
+            {
+              "key": "Project|rich_text",
+              "textContent": "={{ $json.project }}"
+            },
+            {
+              "key": "Company|select",
+              "selectValue": "={{ $json.company }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f7ad9bbb-ee53-4bde-89ae-260703c4d5f5",
+      "name": "Save to Notion Database",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        4064,
+        2640
+      ],
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "credentials": {
+        "notionApi": {
+          "id": "9e0EWRwcIBreuLxa",
+          "name": "Notion account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.inputType }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f586a389-197b-4726-b662-c91edc0bd22f"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "0"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "61668664-4c8c-4714-9447-718e90a8d0e9",
+                    "leftValue": "={{ $json.inputType }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "1"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "476bac88-617e-47c9-b1b5-8dfa63eef1dc",
+                    "leftValue": "={{ $json.inputType }}",
+                    "rightValue": "audio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        1120,
+        2624
+      ],
+      "id": "5b41a5c7-176f-439d-bbee-31779103070c",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "download": true,
+          "imageSize": "large"
+        }
+      },
+      "id": "bcb98186-3141-4e92-a76a-f5af71ab7d23",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        2640
+      ],
+      "webhookId": "b4f58112-fd55-4245-98a3-d8313d865660",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        2864
+      ],
+      "id": "a7f3c78f-3864-479a-856d-9bd192ec8184",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VR8OntYtmRO1TcRI",
+          "name": "Google Gemini(PaLM) Api account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "=const prompt = `\nEkstrak data dari gambar struk secara AKURAT.\n\nAturan:\n- Hanya ambil data yang terlihat.\n- Dilarang mengarang.\n- Jika tidak ada, isi null.\n- Angka tanpa simbol (Rp, titik, koma).\n\nAmbil data:\n- nama: label singkat, jika tidak jelas null\n- harga_total: total akhir\n- tanggal: YYYY-MM-DD\n- merchant: nama toko\n- kategori: Groceries | Elektronik | Pakaian | Makanan/Minuman | Kesehatan | Transportasi | Lainnya\n- items: \"Item - Harga\", jika tidak ada harga tetap tulis item\n\nOutput:\nJSON valid saja, tanpa teks tambahan.\n\n{\n  \"nama\": string || null,\n  \"harga_total\": number | null,\n  \"tanggal\": string | null,\n  \"merchant\": string | null,\n  \"kategori\": string,\n  \"items\": string | null\n}\n`;",
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        2640
+      ],
+      "id": "f899fed4-1f67-4f94-8de3-5c4b6e628324",
+      "name": "Analyze an image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VR8OntYtmRO1TcRI",
+          "name": "Google Gemini(PaLM) Api account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "=const prompt = `\nAnda adalah AI yang bertugas mengekstrak data belanja dari voice note secara AKURAT.\n\nInput:\nVOICE NOTE: \nAturan utama:\n- Hanya gunakan informasi yang benar-benar disebutkan dalam voice note.\n- DILARANG mengarang, menebak, atau menambahkan informasi.\n- Jika data tidak disebutkan, isi dengan null.\n- Semua angka harus berupa angka tanpa simbol (tanpa Rp, titik, koma, dll).\n- Jangan menggunakan tanggal hari ini jika tanggal tidak disebutkan.\n\nData yang harus diekstrak:\n\n1. nama:\n   - Buat label singkat berdasarkan konteks belanja jika disebutkan.\n   - Jika tidak jelas, isi null.\n\n2. harga_total:\n   - Total belanja jika disebutkan.\n   - Jika tidak ada, isi null.\n\n3. tanggal:\n   - Format YYYY-MM-DD.\n   - Hanya isi jika disebutkan secara jelas.\n\n4. merchant:\n   - Nama toko/tempat belanja jika disebutkan.\n   - Jangan menebak.\n\n5. kategori:\n   - Pilih salah satu:\n     Groceries | Elektronik | Pakaian | Makanan | Kesehatan | Transportasi | Lainnya\n   - Jika tidak jelas, gunakan \"Lainnya\".\n\n6. items:\n   - Daftar item yang disebutkan dalam voice note.\n   - Format: \"Nama Item - Jumlah - Harga\"\n   - Jika harga atau jumlah tidak disebutkan, tetap tulis yang tersedia.\n   - Jika tidak ada item, isi null.\n\nOutput:\n- WAJIB dalam format JSON valid.\n- Tanpa penjelasan tambahan.\n- Tanpa teks di luar JSON.\n\nFormat:\n{\n  \"nama\": string | null,\n  \"harga_total\": number | null,\n  \"tanggal\": string | null,\n  \"merchant\": string | null,\n  \"kategori\": string,\n  \"items\": string | null\n}\n`; ",
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        2832
+      ],
+      "id": "4852fba5-3420-4ff9-89bb-d4afe4bd7554",
+      "name": "Analyze audio",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VR8OntYtmRO1TcRI",
+          "name": "Google Gemini(PaLM) Api account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nfunction validateString(value, defaultValue) {\n    if (value === null || value === undefined || value === \"null\" || value === \"\") {\n        return defaultValue;\n    }\n    return value;\n}\n\nfunction validateNumber(value, defaultValue) {\n    if (value === null || value === undefined || value === \"null\" || value === \"\" || isNaN(value)) {\n        return defaultValue;\n    }\n    return value;\n}\n\nconst result = {\n    title: validateString(data.title, \"Transaksi \" + new Date().toLocaleDateString('id-ID')),\n    amount: validateNumber(data.amount, 0),\n    date: validateString(data.date, new Date().toISOString().split('T')[0]),\n    merchant: validateString(data.merchant, \"Tidak diketahui\"),\n    category: validateString(data.category, \"Lainnya\"),\n    items: validateString(data.items, \"-\"),\n    notes: validateString(data.Notes, \"-\"),\n    type: validateString(data.Type, \"-\"),\n    wallet: validateString(data.Wallet, \"-\"),\n    company: validateString(data.Company, \"-\"),\n    project: validateString(data.Project, \"-\")\n};\n\nconsole.log(\"Original data:\", JSON.stringify(data, null, 2));\nconsole.log(\"Validated data:\", JSON.stringify(result, null, 2));\n\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3840,
+        2640
+      ],
+      "id": "acb66817-8694-49c5-b372-7d7f491bc2f9",
+      "name": "Data Validate Function"
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $('Telegram Trigger').first().json.message;\n\nlet inputType = null;\nlet inputData = null;\n\n// Deteksi tipe input\nif (message.text && message.text.toString().trim() !== \"\") {\n    inputType = \"text\";\n    inputData = message.text;\n} \nelse if (message.photo && message.photo.length > 0) {\n    inputType = \"image\";\n    const photo = message.photo[message.photo.length - 1];\n    inputData = photo.file_id;\n}\nelse if (message.audio || message.voice) {\n    inputType = \"audio\";\n    inputData = message.audio ? message.audio.file_id : message.voice.file_id;\n}\nelse {\n    throw new Error(\"No valid input detected. Please send text, image, or audio.\");\n}\n\nreturn {\n    inputType: inputType,\n    inputData: inputData,\n    chatId: message.chat.id,\n    originalMessage: message\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        2640
+      ],
+      "id": "2360b19b-aa88-4f65-9a72-48a1f013fb54",
+      "name": "Input Validate Function"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "12881431-7a12-4e46-9d6e-13b728878d89",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": "=",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2816,
+        2640
+      ],
+      "id": "d5010d40-e61c-4c8a-94e9-65f35a4bdc86",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "title",
+              "value": "={{ $('Extract Expense Information').item.json.output.description }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "amount",
+              "value": "={{ $('Extract Expense Information').item.json.output.amount }}",
+              "type": "number"
+            },
+            {
+              "id": "3",
+              "name": "date",
+              "value": "={{ $('Extract Expense Information').item.json.output.date }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "merchant",
+              "value": "={{ $('Extract Expense Information').item.json.output.merchant }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "category",
+              "value": "={{ $('Extract Expense Information').item.json.output.category }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "items",
+              "value": "={{ $('Extract Expense Information').item.json.output.items }}",
+              "type": "string"
+            },
+            {
+              "id": "39af3118-ffe5-404f-91bd-2e873113755a",
+              "name": "Notes",
+              "value": "={{ $('Extract Expense Information').item.json.output.Notes }}",
+              "type": "string"
+            },
+            {
+              "id": "464630c1-e3f6-4808-9350-4fe7587c42a3",
+              "name": "Type",
+              "value": "={{ $('Extract Expense Information').item.json.output.Type }}",
+              "type": "string"
+            },
+            {
+              "id": "5654255c-4996-48be-87e6-2c583db17f4f",
+              "name": "Wallet",
+              "value": "={{ $('Extract Expense Information').item.json.output.wallet }}",
+              "type": "string"
+            },
+            {
+              "id": "0dd68eb0-60ae-4cd1-9d65-dc5b0b9d7ff9",
+              "name": "Company",
+              "value": "={{ $('Extract Expense Information').item.json.output.Company }}",
+              "type": "string"
+            },
+            {
+              "id": "af985fe4-1e79-4724-9c2b-07d5b779e333",
+              "name": "Project",
+              "value": "={{ $('Extract Expense Information').item.json.output.Project }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b78fc2ad-05ce-4e75-8ad4-5816c8c6ce3e",
+      "name": "Format for Notion",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3616,
+        2544
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('Telegram Trigger').item.json.message.photo[3].file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        2640
+      ],
+      "id": "c0d2acda-e28d-4ec7-8d1b-1e2c6dca054f",
+      "name": "Get a file",
+      "webhookId": "61782136-3cfa-4842-9206-47359b18d8e7",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('Telegram Trigger').item.json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        2832
+      ],
+      "id": "1f1697fe-0f05-4bd2-9750-f6f7bc970022",
+      "name": "Get a file4",
+      "webhookId": "38dc47af-d87b-4db6-b76a-7464c872c850",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Silakan tunggu, data sedang diproses......",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        2448
+      ],
+      "id": "a499b0da-d756-44e7-b0a5-37e2da855917",
+      "name": "Send a text message13",
+      "webhookId": "9afed1d8-9dd0-4083-b897-a00d949eefa3",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3bf3371d-a5ab-48ea-aa22-9c2695293b0d",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": "={{ $json.data.approved }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        2640
+      ],
+      "id": "2355d065-2d2c-41b7-b754-628b90b270b2",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $json.message.chat.id }}",
+        "message": "=Sebelum dikelola dan dicatat, pastikan data dalam pesan ini sudah benar. Apakah sudah sesuai?",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        2640
+      ],
+      "id": "f9f8799a-a151-4461-b799-768cca7b9c2f",
+      "name": "Send a text message14",
+      "webhookId": "b8ec989e-f7fd-473e-928e-4396d656285a",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Terima kasih atas konfirmasinya. Data belum sesuai, silakan kirim ulang dengan informasi yang benar.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        2832
+      ],
+      "id": "564d8acf-9c6a-49fe-9105-5ddd83be5f8b",
+      "name": "Send a text message15",
+      "webhookId": "9afed1d8-9dd0-4083-b897-a00d949eefa3",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=Berikut merupakan data final:\n\n- *Judul:* {{ $('Data Validate Function').item.json.title }}\n- *Jumlah:* Rp {{ $('Data Validate Function').item.json.amount }}\n- *Tanggal:* {{ $('Data Validate Function').item.json.date }}\n- *Merchant:* {{ $('Data Validate Function').item.json.merchant }}\n- *Kategori:* {{ $('Data Validate Function').item.json.category }}\n- *Wallet:* {{ $('Data Validate Function').item.json.wallet }}\n- *Project:* {{ $('Data Validate Function').item.json.project }}\n- *Catatan:* {{ $('Data Validate Function').item.json.notes }}\n- *Item belanjaan:* {{ $('Data Validate Function').item.json.items }}\n\nData sudah berhasil disimpan di Notion 📁 Jika ingin mencatat data lainnya, silakan kirim pesan kembali 😊",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4288,
+        2640
+      ],
+      "id": "b6d7a183-4647-4790-a56f-3a2072c6b695",
+      "name": "Send a text message16",
+      "webhookId": "9afed1d8-9dd0-4083-b897-a00d949eefa3",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "=Data asli:\n{{ JSON.stringify($(\"Extract Expense Information\").item.json.output) }}\n\nPembaruan dari user:\n{{ $json.data.text }}\n\nGabungkan data asli dengan pembaruan dari user. Jika user memberikan nilai baru untuk field tertentu, gunakan nilai baru tersebut. Jika tidak, pertahankan nilai asli. Pastikan format sesuai dengan struktur yang diinginkan.",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "description",
+              "description": "Brief description of the expense or purchase (gunakan nilai dari user jika ada field title/description dalam pembaruan)",
+              "required": true
+            },
+            {
+              "name": "amount",
+              "type": "number",
+              "description": "Total amount in numeric format without currency symbols",
+              "required": true
+            },
+            {
+              "name": "date",
+              "type": "date",
+              "description": "Date in YYYY-MM-DD format"
+            },
+            {
+              "name": "merchant",
+              "description": "Store or merchant name"
+            },
+            {
+              "name": "category",
+              "description": "Expense category (Groceries, Payroll, Operational Fix Cost, Operational Variabel Cost)"
+            },
+            {
+              "name": "items",
+              "description": "List of purchased items with prices"
+            },
+            {
+              "name": "Notes",
+              "description": "Additional notes or warranty details"
+            },
+            {
+              "name": "Type",
+              "description": "Transaction type: expense or income"
+            },
+            {
+              "name": "chat_id",
+              "type": "number",
+              "description": "Chat ID from original data"
+            },
+            {
+              "name": "wallet",
+              "description": "\"wallet\" must be a string or null, extracted from input; do not invent values."
+            },
+            {
+              "name": "company",
+              "description": "Classify the company entity from the text as either {dako} or {dako_studio}. If no company is mentioned, return {dako}. Provide the result only"
+            },
+            {
+              "name": "project",
+              "description": "Identify and list all projects mentioned in the text. If none are found, return 'null' or an empty string."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "449f23b7-da9b-47b1-81d9-4076fe5777e3",
+      "name": "AI Merge and Validate Data",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        3264,
+        2736
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputText = $input.first().json.extractedText || $input.first().json.text || $input.first().json.content?.parts?.[0]?.text || \"\";\n\n// Remove markdown code blocks if present\nlet cleanedText = inputText.trim();\nif (cleanedText.startsWith(\"```json\")) {\n  cleanedText = cleanedText.replace(/^```json\\s*/, \"\").replace(/```\\s*$/, \"\");\n} else if (cleanedText.startsWith(\"```\")) {\n  cleanedText = cleanedText.replace(/^```\\s*/, \"\").replace(/```\\s*$/, \"\");\n}\n\nreturn { extractedText: cleanedText.trim() };"
+      },
+      "id": "187e4acb-7167-449b-a7de-e7965785e7f9",
+      "name": "Clean JSON Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        2640
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "title",
+              "value": "={{ $json.output.description }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "amount",
+              "value": "={{ $json.output.amount }}",
+              "type": "number"
+            },
+            {
+              "id": "3",
+              "name": "date",
+              "value": "={{ $json.output.date }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "merchant",
+              "value": "={{ $json.output.merchant }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "category",
+              "value": "={{ $json.output.category }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "items",
+              "value": "={{ $json.output.items }}",
+              "type": "string"
+            },
+            {
+              "id": "39af3118-ffe5-404f-91bd-2e873113755a",
+              "name": "Notes",
+              "value": "={{ $json.output.Notes }}",
+              "type": "string"
+            },
+            {
+              "id": "464630c1-e3f6-4808-9350-4fe7587c42a3",
+              "name": "Type",
+              "value": "={{ $json.output.Type }}",
+              "type": "string"
+            },
+            {
+              "id": "5654255c-4996-48be-87e6-2c583db17f4f",
+              "name": "Wallet",
+              "value": "={{ $json.output.wallet }}",
+              "type": "string"
+            },
+            {
+              "id": "0dd68eb0-60ae-4cd1-9d65-dc5b0b9d7ff9",
+              "name": "Company",
+              "value": "={{ $json.output.company }}",
+              "type": "string"
+            },
+            {
+              "id": "af985fe4-1e79-4724-9c2b-07d5b779e333",
+              "name": "Project",
+              "value": "={{ $json.output.project }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bd403ce6-c936-4f83-8204-5f48c999d858",
+      "name": "Format for Notion_1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3616,
+        2736
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "message": "=*Data pengeluaran yang saya tangkap:*\n\n- *Judul:* {{ $json.output.description }}\n- *Jumlah:* Rp {{ $json.output.amount }}\n- *Tanggal:* {{ $json.output.date }}\n- *Merchant:* {{ $json.output.merchant }}\n- *Kategori:* {{ $json.output.category }}\n- *Wallet:* {{ $json.output.wallet }}\n- *Kategori Perusahaan:* {{ $json.output.Company }}\n- *Project:* {{ $json.output.Project }}\n- *Catatan:* {{ $json.output.Notes}}\n- *Item belanjaan:* {{ $json.output.massage_text }}\n\n**Apakah data sudah sesuai?**\n\n✅ Klik *approve* untuk langsung menyimpan ke Notion.\n✏️ Klik *decline* jika ada data yang perlu diperbaiki, lalu kirimkan revisi dengan format berikut:\n`judul: nilai baru, jumlah: nilai baru, kategori: nilai baru`\n\n**Contoh:**\n`judul: Makan siang, jumlah: 50000, kategori: Makanan`\n\nJika hanya ingin mengubah satu field, cukup kirimkan:\n`total: 400000`",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2592,
+        2640
+      ],
+      "id": "d705c886-7890-4112-a70c-8a074bcc9a41",
+      "name": "Send a text message17",
+      "webhookId": "b8ec989e-f7fd-473e-928e-4396d656285a",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Berikut merupakan hasil akhir setelah .   - *Judul:* {{ $('Extract Expense Information').item.json.output.description }} - *Jumlah:* Rp {{ $('Extract Expense Information').item.json.output.amount }} - *Tanggal:* {{ $('Extract Expense Information').item.json.output.date }} - *Merchant:* {{ $('Extract Expense Information').item.json.output.merchant }} - *Kategori:* {{ $('Extract Expense Information').item.json.output.category }} - *Wallet:* {{ $('Extract Expense Information').item.json.output.wallet }} - *Project:* {{ $('Extract Expense Information').item.json.output.Project }} - *Catatan:* {{ $('Extract Expense Information').item.json.output.Notes }} - *Item belanjaan:* {{ $('Extract Expense Information').item.json.output.massage_text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3920,
+        2896
+      ],
+      "id": "bea40f0f-0004-4928-ba23-442061f3577b",
+      "name": "Send a text message18",
+      "webhookId": "9afed1d8-9dd0-4083-b897-a00d949eefa3",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "AI Merge and Validate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Text Sources": {
+      "main": [
+        [
+          {
+            "node": "Clean JSON Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Text Input": {
+      "main": [
+        [
+          {
+            "node": "Merge All Text Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Expense Information": {
+      "main": [
+        [
+          {
+            "node": "Send a text message17",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Notion Database": {
+      "main": [
+        [
+          {
+            "node": "Send a text message16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Prepare Text Input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get a file4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send a text message14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract Expense Information",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI Merge and Validate Data",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze an image": {
+      "main": [
+        [
+          {
+            "node": "Merge All Text Sources",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Analyze audio": {
+      "main": [
+        [
+          {
+            "node": "Merge All Text Sources",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Data Validate Function": {
+      "main": [
+        [
+          {
+            "node": "Save to Notion Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input Validate Function": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Format for Notion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for Notion": {
+      "main": [
+        [
+          {
+            "node": "Data Validate Function",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Analyze an image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file4": {
+      "main": [
+        [
+          {
+            "node": "Analyze audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "Send a text message13",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Input Validate Function",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message14": {
+      "main": [
+        [
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Merge and Validate Data": {
+      "main": [
+        [
+          {
+            "node": "Format for Notion_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean JSON Response": {
+      "main": [
+        [
+          {
+            "node": "Extract Expense Information",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for Notion_1": {
+      "main": [
+        [
+          {
+            "node": "Data Validate Function",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message17": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d1078cc1-6f78-4cdc-83ed-0fc6bad3cc16",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "55610ab40ec438f7d6aa8007bfeae732bdf2a7ca0d8e42d7155a97bc98c9b2e4"
+  },
+  "id": "XyopWW5x4918Lt3n",
+  "tags": []
+}
