@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'payment_gateway' => [
+        'webhook_signature' => env('PAYMENT_WEBHOOK_SIGNATURE', 'dummy-signature'),
+    ],
+
 ];
