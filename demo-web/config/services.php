@@ -35,8 +35,10 @@ return [
         ],
     ],
 
-    'payment_gateway' => [
-        'webhook_signature' => env('PAYMENT_WEBHOOK_SIGNATURE', 'dummy-signature'),
+    'midtrans' => [
+        'mode' => env('MIDTRANS_MODE', 'fake'),
+        'server_key' => env('MIDTRANS_SERVER_KEY', 'mock-server-key'),
+        'snap_url' => env('MIDTRANS_SNAP_URL', 'https://app.sandbox.midtrans.com/snap/v1'),
     ],
 
 ];

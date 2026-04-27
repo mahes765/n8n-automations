@@ -27,14 +27,6 @@ class DatabaseSeeder extends Seeder
             ],
         );
 
-        SubscriptionPlan::updateOrCreate(
-            ['name' => 'Basic'],
-            ['price' => 50000, 'duration_days' => 30],
-        );
-
-        SubscriptionPlan::updateOrCreate(
-            ['name' => 'Pro'],
-            ['price' => 150000, 'duration_days' => 30],
-        );
+        $this->call(SubscriptionPlanSeeder::class);
     }
 }

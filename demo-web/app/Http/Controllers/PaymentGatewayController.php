@@ -3,17 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
-use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class PaymentGatewayController extends Controller
 {
-    public function show(Transaction $transaction): View
+    public function show(Transaction $transaction): RedirectResponse
     {
-        $transaction->load(['plan', 'user']);
-
-        return view('payment-gateway.show', [
-            'transaction' => $transaction,
-            'signature' => config('services.payment_gateway.webhook_signature'),
-        ]);
+        return redirect()->route('fake-payment.show', $transaction);
     }
 }

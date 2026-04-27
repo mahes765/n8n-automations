@@ -7,6 +7,19 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Subscription Midtrans Simulation
+
+1. Jalankan `php artisan migrate:fresh --seed`.
+2. Seeder membuat user `test@example.com` dengan password `password` dan 3 plan: `7 Hari`, `30 Hari`, `3 Bulan`.
+3. Buka `GET /plans`, isi `User ID`, lalu klik `Subscribe`.
+4. Dalam mode default `MIDTRANS_MODE=fake`, user diarahkan ke `GET /fake-payment/{transaction_id}`.
+5. Klik `Bayar Sukses`, `Gagal`, atau `Expired`. Halaman fake mengirim payload Midtrans-style ke `POST /api/webhook/midtrans`.
+6. Hanya webhook dengan `transaction_status=settlement` dan signature valid yang mengaktifkan subscription.
+7. Cek status via `GET /api/user/subscription?user_id=1`.
+8. Akses downstream via `GET /api/n8n/telegram` atau `GET /api/n8n/form` dengan header `X-User-Id: 1`.
+
+Untuk mode production, set `MIDTRANS_MODE=production`, `MIDTRANS_SERVER_KEY`, dan `MIDTRANS_SNAP_URL`. Redirect success hanya menampilkan notifikasi; subscription tetap aktif hanya dari webhook.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

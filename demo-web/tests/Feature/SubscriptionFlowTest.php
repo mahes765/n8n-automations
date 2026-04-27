@@ -15,12 +15,12 @@ class SubscriptionFlowTest extends TestCase
     {
         $user = User::factory()->create();
         $plan = SubscriptionPlan::create([
-            'name' => 'Basic',
+            'name' => '30 Hari',
             'price' => 50000,
             'duration_days' => 30,
         ]);
 
-        $this->getJson("/n8n/telegram?user_id={$user->id}")
+        $this->getJson("/api/n8n/telegram?user_id={$user->id}")
             ->assertForbidden();
 
         $subscribeResponse = $this->postJson('/subscribe', [
@@ -28,12 +28,18 @@ class SubscriptionFlowTest extends TestCase
             'plan_id' => $plan->id,
         ])->assertCreated();
 
-        $transactionId = $subscribeResponse->json('data.transaction_id');
+        $transactionId = $subscribeResponse->json('transaction_id');
+        $orderId = $subscribeResponse->json('midtrans_order_id');
+        $signature = hash('sha512', $orderId.'200'.$plan->price.config('services.midtrans.server_key'));
 
-        $this->postJson('/api/webhook/payment', [
-            'transaction_id' => $transactionId,
-            'status' => 'paid',
-            'signature' => 'dummy-signature',
+        $this->postJson('/api/webhook/midtrans', [
+            'order_id' => $orderId,
+            'transaction_status' => 'settlement',
+            'payment_type' => 'credit_card',
+            'settlement_time' => '2026-04-27 12:00:00',
+            'gross_amount' => $plan->price,
+            'status_code' => '200',
+            'signature_key' => $signature,
         ])->assertOk();
 
         $this->assertDatabaseHas('transactions', [
@@ -47,16 +53,16 @@ class SubscriptionFlowTest extends TestCase
             'status' => 'active',
         ]);
 
-        $this->getJson("/n8n/telegram?user_id={$user->id}")
+        $this->getJson("/api/n8n/telegram?user_id={$user->id}")
             ->assertOk()
-            ->assertJson(['message' => 'Access granted to Telegram Bot']);
+            ->assertSeeText('Access granted to Telegram Bot');
     }
 
     public function test_success_redirect_does_not_activate_subscription(): void
     {
         $user = User::factory()->create();
         $plan = SubscriptionPlan::create([
-            'name' => 'Pro',
+            'name' => '3 Bulan',
             'price' => 150000,
             'duration_days' => 30,
         ]);
@@ -66,7 +72,7 @@ class SubscriptionFlowTest extends TestCase
             'plan_id' => $plan->id,
         ])->assertCreated();
 
-        $this->get($subscribeResponse->json('data.redirect_url'))
+        $this->get($subscribeResponse->json('redirect_url'))
             ->assertOk();
 
         $this->assertDatabaseHas('subscriptions', [
@@ -75,7 +81,7 @@ class SubscriptionFlowTest extends TestCase
             'status' => 'pending',
         ]);
 
-        $this->getJson("/n8n/form?user_id={$user->id}")
+        $this->getJson("/api/n8n/form?user_id={$user->id}")
             ->assertForbidden();
     }
 }

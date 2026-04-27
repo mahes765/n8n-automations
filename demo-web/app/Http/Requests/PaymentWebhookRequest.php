@@ -3,10 +3,18 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class PaymentWebhookRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('signature_key') && $this->header('X-Midtrans-Signature')) {
+            $this->merge([
+                'signature_key' => $this->header('X-Midtrans-Signature'),
+            ]);
+        }
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -15,9 +23,13 @@ class PaymentWebhookRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'transaction_id' => ['required', 'integer', 'exists:transactions,id'],
-            'status' => ['required', Rule::in(['paid', 'failed', 'expired'])],
-            'signature' => ['required', 'string'],
+            'order_id' => ['required', 'string', 'exists:transactions,midtrans_order_id'],
+            'transaction_status' => ['required', 'string'],
+            'payment_type' => ['nullable', 'string'],
+            'settlement_time' => ['nullable', 'date'],
+            'gross_amount' => ['required', 'numeric'],
+            'status_code' => ['required', 'string'],
+            'signature_key' => ['required', 'string'],
         ];
     }
 }

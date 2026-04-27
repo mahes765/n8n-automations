@@ -2,21 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 class N8nController extends Controller
 {
-    public function telegram(): JsonResponse
+    public function telegram(): Response
     {
-        return response()->json([
-            'message' => 'Access granted to Telegram Bot',
-        ]);
+        return response('Access granted to Telegram Bot');
     }
 
-    public function form(): JsonResponse
+    public function form(): Response
     {
-        return response()->json([
-            'message' => 'Access granted to Web Form',
-        ]);
+        return response('Access granted to Form');
     }
 }

@@ -15,9 +15,21 @@ class Transaction extends Model
     protected $fillable = [
         'user_id',
         'plan_id',
+        'midtrans_order_id',
         'status',
-        'external_id',
+        'gross_amount',
+        'payment_type',
+        'settlement_time',
+        'raw_response',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'settlement_time' => 'datetime',
+            'raw_response' => 'array',
+        ];
+    }
 
     public function user(): BelongsTo
     {

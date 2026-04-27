@@ -3,31 +3,52 @@
 namespace App\Services;
 
 use App\Models\Subscription;
-use App\Models\Transaction;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
 class SubscriptionService
 {
-    public function activateFromPaidTransaction(Transaction $transaction): Subscription
+    public function createPendingSubscription(int $userId, int $planId, int $transactionId): Subscription
     {
-        return DB::transaction(function () use ($transaction) {
-            $transaction->loadMissing('plan');
+        return Subscription::create([
+            'user_id' => $userId,
+            'plan_id' => $planId,
+            'status' => Subscription::STATUS_PENDING,
+            'start_date' => null,
+            'end_date' => null,
+        ]);
+    }
 
-            return Subscription::updateOrCreate(
-                ['user_id' => $transaction->user_id],
-                [
-                    'plan_id' => $transaction->plan_id,
-                    'status' => Subscription::STATUS_ACTIVE,
-                    'start_date' => now(),
-                    'end_date' => now()->addDays($transaction->plan->duration_days),
-                ],
-            );
+    public function activateSubscription(
+        int $userId,
+        int $planId,
+        CarbonInterface $startDate,
+        CarbonInterface $endDate,
+    ): Subscription {
+        return DB::transaction(function () use ($userId, $planId, $startDate, $endDate) {
+            Subscription::query()
+                ->where('user_id', $userId)
+                ->whereIn('status', [Subscription::STATUS_ACTIVE, Subscription::STATUS_PENDING])
+                ->update([
+                    'status' => Subscription::STATUS_INACTIVE,
+                    'start_date' => null,
+                    'end_date' => null,
+                ]);
+
+            return Subscription::create([
+                'user_id' => $userId,
+                'plan_id' => $planId,
+                'status' => Subscription::STATUS_ACTIVE,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+            ]);
         });
     }
 
-    public function expireFromTransaction(Transaction $transaction): void
+    public function expirePendingSubscription(int $userId): void
     {
-        Subscription::where('user_id', $transaction->user_id)
+        Subscription::query()
+            ->where('user_id', $userId)
             ->where('status', Subscription::STATUS_PENDING)
             ->update([
                 'status' => Subscription::STATUS_EXPIRED,
@@ -35,14 +56,35 @@ class SubscriptionService
             ]);
     }
 
-    public function markInactiveFromFailedTransaction(Transaction $transaction): void
+    public function markPendingSubscriptionInactive(int $userId): void
     {
-        Subscription::where('user_id', $transaction->user_id)
+        Subscription::query()
+            ->where('user_id', $userId)
             ->where('status', Subscription::STATUS_PENDING)
             ->update([
                 'status' => Subscription::STATUS_INACTIVE,
                 'start_date' => null,
                 'end_date' => null,
             ]);
+    }
+
+    public function getActiveSubscription(int $userId): ?Subscription
+    {
+        return Subscription::query()
+            ->with('plan')
+            ->where('user_id', $userId)
+            ->where('status', Subscription::STATUS_ACTIVE)
+            ->where('end_date', '>', now())
+            ->latest('end_date')
+            ->first();
+    }
+
+    public function checkAccess(?int $userId): bool
+    {
+        if (! $userId) {
+            return false;
+        }
+
+        return $this->getActiveSubscription($userId) !== null;
     }
 }

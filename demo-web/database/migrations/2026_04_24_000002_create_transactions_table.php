@@ -12,8 +12,12 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('plan_id')->constrained('subscription_plans')->cascadeOnDelete();
-            $table->string('status')->default('pending');
-            $table->string('external_id')->unique();
+            $table->string('midtrans_order_id')->unique();
+            $table->enum('status', ['pending', 'paid', 'failed', 'expired'])->default('pending');
+            $table->unsignedInteger('gross_amount');
+            $table->string('payment_type')->nullable();
+            $table->dateTime('settlement_time')->nullable();
+            $table->json('raw_response')->nullable();
             $table->timestamps();
 
             $table->index(['user_id', 'status']);
