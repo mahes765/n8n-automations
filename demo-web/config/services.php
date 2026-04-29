@@ -36,9 +36,12 @@ return [
     ],
 
     'midtrans' => [
-        'mode' => env('MIDTRANS_MODE', 'fake'),
+        'mode' => env('MIDTRANS_MODE', 'sandbox'),
         'server_key' => env('MIDTRANS_SERVER_KEY', 'mock-server-key'),
-        'snap_url' => env('MIDTRANS_SNAP_URL', 'https://app.sandbox.midtrans.com/snap/v1'),
+        'client_key' => env('MIDTRANS_CLIENT_KEY'),
+        'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
+        'is_sanitized' => env('MIDTRANS_IS_SANITIZED', true),
+        'is_3ds' => env('MIDTRANS_IS_3DS', true),
     ],
 
 ];

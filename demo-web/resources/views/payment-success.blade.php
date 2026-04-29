@@ -7,8 +7,8 @@
 </head>
 <body>
     <main>
-        <h1>Pembayaran diproses</h1>
-        <p>Subscription akan aktif setelah webhook Midtrans berhasil diverifikasi oleh backend.</p>
+        <h1>Pembayaran diberhasil</h1>
+        <p>Subscription sudah aktif dan berhasil diverifikasi oleh backend.</p>
     </main>
 </body>
 </html>

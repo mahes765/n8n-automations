@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Transaction;
 use App\Services\FakeMidtransService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class FakePaymentController extends Controller
 {
@@ -41,5 +43,21 @@ class FakePaymentController extends Controller
                 ];
             }),
         ]);
+    }
+
+    public function process(Request $request, FakeMidtransService $fakeMidtransService): RedirectResponse
+    {
+        $result = $fakeMidtransService->handleWebhook(
+            $request->all(),
+            $request->input('signature_key'),
+        );
+
+        $transaction = $result['transaction'];
+
+        if ($transaction->status === Transaction::STATUS_PAID) {
+            return redirect()->route('payment.success');
+        }
+
+        return redirect()->route('payment.failed');
     }
 }

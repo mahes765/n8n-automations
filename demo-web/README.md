@@ -18,7 +18,7 @@
 7. Cek status via `GET /api/user/subscription?user_id=1`.
 8. Akses downstream via `GET /api/n8n/telegram` atau `GET /api/n8n/form` dengan header `X-User-Id: 1`.
 
-Untuk mode production, set `MIDTRANS_MODE=production`, `MIDTRANS_SERVER_KEY`, dan `MIDTRANS_SNAP_URL`. Redirect success hanya menampilkan notifikasi; subscription tetap aktif hanya dari webhook.
+Untuk mode Midtrans asli (sandbox/production), set `MIDTRANS_MODE=real`, `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_IS_PRODUCTION` (`false` untuk sandbox, `true` untuk production), `MIDTRANS_IS_SANITIZED`, dan `MIDTRANS_IS_3DS`. Endpoint subscribe sekarang juga mengembalikan `snap_token` selain `redirect_url`; subscription tetap aktif hanya dari webhook.
 
 ## About Laravel
 

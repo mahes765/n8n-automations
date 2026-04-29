@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\SubscribeRequest;
 use App\Models\SubscriptionPlan;
 use App\Models\Transaction;
-use App\Models\User;
 use App\Services\MidtransServiceInterface;
 use App\Services\SubscriptionService;
 use Illuminate\Http\RedirectResponse;
@@ -20,8 +19,18 @@ class SubscriptionController extends Controller
         SubscriptionService $subscriptionService,
     ): JsonResponse|RedirectResponse
     {
-        $userId = auth()->id() ?: $request->integer('user_id');
-        $user = User::findOrFail($userId);
+        $user = $request->user();
+
+        if (! $user) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Login diperlukan sebelum melakukan subscribe.',
+                ], 401);
+            }
+
+            return redirect()->route('plans.index');
+        }
+
         $plan = SubscriptionPlan::findOrFail($request->integer('plan_id'));
         $orderId = 'ORDER-'.$user->id.'-'.now()->format('YmdHis').'-'.strtoupper(str()->random(6));
 
@@ -36,9 +45,12 @@ class SubscriptionController extends Controller
 
             $subscriptionService->createPendingSubscription($user->id, $plan->id, $transaction->id);
 
+            $midtransPayment = $midtransService->createTransaction($orderId, $plan->price, $user);
+
             return [
                 'transaction' => $transaction,
-                'redirect_url' => $midtransService->createTransaction($orderId, $plan->price, $user),
+                'redirect_url' => $midtransPayment['redirect_url'],
+                'snap_token' => $midtransPayment['snap_token'],
             ];
         });
 
@@ -48,6 +60,7 @@ class SubscriptionController extends Controller
 
         return response()->json([
             'redirect_url' => $payment['redirect_url'],
+            'snap_token' => $payment['snap_token'],
             'transaction_id' => $payment['transaction']->id,
             'midtrans_order_id' => $payment['transaction']->midtrans_order_id,
         ], 201);
@@ -55,8 +68,15 @@ class SubscriptionController extends Controller
 
     public function current(SubscriptionService $subscriptionService): JsonResponse
     {
-        $userId = auth()->id() ?: request()->integer('user_id');
-        $subscription = $userId ? $subscriptionService->getActiveSubscription($userId) : null;
+        $userId = auth()->id();
+
+        if (! $userId) {
+            return response()->json([
+                'message' => 'Login diperlukan untuk melihat subscription.',
+            ], 401);
+        }
+
+        $subscription = $subscriptionService->getActiveSubscription($userId);
 
         if (! $subscription) {
             return response()->json([

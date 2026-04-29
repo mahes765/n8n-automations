@@ -14,7 +14,6 @@ class SubscribeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => [auth()->check() ? 'nullable' : 'required', 'integer', 'exists:users,id'],
             'plan_id' => ['required', 'integer', 'exists:subscription_plans,id'],
         ];
     }

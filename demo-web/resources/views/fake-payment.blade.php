@@ -36,14 +36,14 @@
         <dd>{{ $transaction->status }}</dd>
     </dl>
 
-    <form method="POST" action="{{ route('webhook.midtrans') }}">
+    <form method="POST" action="{{ route('fake-payment.process') }}">
+        @csrf
         @foreach ($payloads['settlement']['payload'] as $name => $value)
             <input type="hidden" data-status="settlement" name="{{ $name }}" value="{{ $value }}">
         @endforeach
 
         @foreach ($payloads as $status => $button)
             <button class="{{ $button['class'] }}" name="transaction_status" value="{{ $status }}"
-                formaction="{{ route('webhook.midtrans') }}"
                 onclick='for (const [key, value] of Object.entries(@json($button["payload"]))) { let input = this.form.elements[key]; if (input) input.value = value; }'>
                 {{ $button['label'] }}
             </button>

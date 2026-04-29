@@ -15,11 +15,14 @@ class FakeMidtransService implements MidtransServiceInterface
     ) {
     }
 
-    public function createTransaction(string $orderId, int $amount, User $user): string
+    public function createTransaction(string $orderId, int $amount, User $user): array
     {
         $transaction = Transaction::where('midtrans_order_id', $orderId)->firstOrFail();
 
-        return route('fake-payment.show', $transaction);
+        return [
+            'snap_token' => 'fake-'.$orderId,
+            'redirect_url' => route('fake-payment.show', $transaction),
+        ];
     }
 
     public function handleWebhook(array $payload, ?string $signature = null): array
@@ -66,15 +69,16 @@ class FakeMidtransService implements MidtransServiceInterface
                     $transaction->plan_id,
                     $settlementTime,
                     $settlementTime->copy()->addDays($transaction->plan->duration_days),
+                    $transaction->id,
                 );
             }
 
             if ($status === Transaction::STATUS_EXPIRED) {
-                $this->subscriptionService->expirePendingSubscription($transaction->user_id);
+                $this->subscriptionService->expirePendingSubscription($transaction->user_id, $transaction->id);
             }
 
             if ($status === Transaction::STATUS_FAILED) {
-                $this->subscriptionService->markPendingSubscriptionInactive($transaction->user_id);
+                $this->subscriptionService->markPendingSubscriptionInactive($transaction->user_id, $transaction->id);
             }
 
             return [

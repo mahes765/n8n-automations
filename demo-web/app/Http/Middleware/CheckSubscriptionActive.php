@@ -16,9 +16,7 @@ class CheckSubscriptionActive
 
     public function handle(Request $request, Closure $next): Response
     {
-        $userId = auth()->id()
-            ?: (int) $request->header('X-User-Id')
-            ?: $request->integer('user_id');
+        $userId = auth()->id();
 
         if (! $this->subscriptionService->checkAccess($userId)) {
             return response()->json([
