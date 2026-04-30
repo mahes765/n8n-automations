@@ -13,9 +13,28 @@
 
         main { width: min(1020px, calc(100vw - 32px)); margin: 52px auto; }
 
-        .page-header { margin-bottom: 28px; }
+        .page-header {
+            margin-bottom: 28px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
         .page-header h1 { font-family: 'DM Serif Display', serif; font-size: 30px; font-weight: 400; margin: 0 0 6px; }
         .page-header p { font-size: 14px; color: #64748b; margin: 0; }
+        .logout-form { margin: 0; }
+        .logout-btn {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #fff;
+            color: #475569;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 12px;
+        }
+        .logout-btn:hover { background: #f8fafc; color: #172033; }
 
         .info-bar {
             background: #eff6ff; border: 1px solid #bfdbfe;
@@ -77,6 +96,12 @@
 
         .plan-meta { font-size: 11px; color: #94a3b8; text-align: center; margin-top: 10px; }
         .btn[disabled] { opacity: 0.7; cursor: wait; }
+
+        @media (max-width: 560px) {
+            .page-header { flex-direction: column; }
+            .logout-form { width: 100%; }
+            .logout-btn { width: 100%; }
+        }
     </style>
 
     @if (($midtrans['mode'] ?? 'fake') !== 'fake' && ! empty($midtrans['client_key']))
@@ -89,8 +114,15 @@
 <body>
 <main>
     <div class="page-header">
-        <h1>Paket Subscription</h1>
-        <p>Pilih paket yang sesuai kebutuhan Anda. Akses aktif setelah pembayaran dikonfirmasi.</p>
+        <div>
+            <h1>Paket Subscription</h1>
+            <p>Pilih paket yang sesuai kebutuhan Anda. Akses aktif setelah pembayaran dikonfirmasi.</p>
+        </div>
+
+        <form class="logout-form" method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit" class="logout-btn">Logout</button>
+        </form>
     </div>
 
     <div class="info-bar">

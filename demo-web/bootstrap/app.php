@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             'subscribe',
+            'fake-payment/process',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

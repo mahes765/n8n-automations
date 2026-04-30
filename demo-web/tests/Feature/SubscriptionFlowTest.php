@@ -5,7 +5,10 @@ namespace Tests\Feature;
 use App\Models\SubscriptionPlan;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\MidtransService;
+use App\Services\MidtransServiceInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery\MockInterface;
 use Tests\TestCase;
 
 class SubscriptionFlowTest extends TestCase
@@ -14,6 +17,8 @@ class SubscriptionFlowTest extends TestCase
 
     public function test_paid_webhook_activates_subscription_and_grants_n8n_access(): void
     {
+        $this->mockMidtransCheckout();
+
         $user = User::factory()->create();
         $plan = SubscriptionPlan::create([
             'name' => '30 Hari',
@@ -32,6 +37,8 @@ class SubscriptionFlowTest extends TestCase
         $transactionId = $subscribeResponse->json('transaction_id');
         $orderId = $subscribeResponse->json('midtrans_order_id');
         $signature = hash('sha512', $orderId.'200'.$plan->price.config('services.midtrans.server_key'));
+
+        $this->app->bind(MidtransServiceInterface::class, MidtransService::class);
 
         $this->assertDatabaseHas('subscriptions', [
             'user_id' => $user->id,
@@ -71,6 +78,8 @@ class SubscriptionFlowTest extends TestCase
 
     public function test_success_redirect_does_not_activate_subscription(): void
     {
+        $this->mockMidtransCheckout();
+
         $user = User::factory()->create();
         $plan = SubscriptionPlan::create([
             'name' => '3 Bulan',
@@ -98,6 +107,8 @@ class SubscriptionFlowTest extends TestCase
 
     public function test_subscribe_uses_authenticated_user_and_ignores_submitted_user_id(): void
     {
+        $this->mockMidtransCheckout();
+
         $authenticatedUser = User::factory()->create();
         $otherUser = User::factory()->create();
         $plan = SubscriptionPlan::create([
@@ -159,5 +170,16 @@ class SubscriptionFlowTest extends TestCase
             'transaction_id' => $transaction->id,
             'status' => 'active',
         ]);
+    }
+
+    private function mockMidtransCheckout(): void
+    {
+        $this->mock(MidtransServiceInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('createTransaction')
+                ->andReturnUsing(fn (string $orderId): array => [
+                    'snap_token' => 'test-'.$orderId,
+                    'redirect_url' => route('payment.success'),
+                ]);
+        });
     }
 }
