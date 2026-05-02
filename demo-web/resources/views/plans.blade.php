@@ -42,6 +42,31 @@
             color: #1e40af; margin-bottom: 24px;
             display: flex; align-items: center; gap: 8px;
         }
+        .telegram-panel {
+            background: #fff; border: 1px solid #dbeafe;
+            border-radius: 8px; padding: 16px; margin-bottom: 24px;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 16px;
+        }
+        .telegram-panel strong { display: block; font-size: 14px; margin-bottom: 4px; }
+        .telegram-panel span { display: block; color: #64748b; font-size: 13px; }
+        .telegram-code {
+            display: inline-block; margin-top: 8px; padding: 6px 8px;
+            border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0;
+            color: #172033; font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-size: 12px; overflow-wrap: anywhere;
+        }
+        .telegram-btn {
+            flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+            min-width: 150px; padding: 10px 12px; border-radius: 8px;
+            background: #0f766e; color: #fff; font-size: 13px; font-weight: 600;
+            text-decoration: none;
+        }
+        .telegram-btn:hover { background: #115e59; }
+        .telegram-btn.disabled {
+            background: #e2e8f0; color: #64748b; cursor: not-allowed;
+            pointer-events: none;
+        }
 
         .plans-grid {
             display: grid;
@@ -101,6 +126,8 @@
             .page-header { flex-direction: column; }
             .logout-form { width: 100%; }
             .logout-btn { width: 100%; }
+            .telegram-panel { align-items: stretch; flex-direction: column; }
+            .telegram-btn { width: 100%; }
         }
     </style>
 
@@ -131,6 +158,29 @@
             <path d="M8 7v4M8 5.5v.5" stroke="#1d4ed8" stroke-width="1.3" stroke-linecap="round"/>
         </svg>
         Pembayaran aman melalui payment gateway. Anda masuk sebagai {{ $user->name }} #{{ $user->id }}.
+    </div>
+
+    <div class="telegram-panel">
+        <div>
+            @if ($user->telegram_id)
+                <strong>Telegram sudah terhubung</strong>
+                <span>Bot akan mengenali akun Telegram Anda secara otomatis.</span>
+            @else
+                <strong>Hubungkan Telegram</strong>
+                @if ($telegramBotUrl)
+                    <span>Klik tombol ini, lalu tekan Start di Telegram. Bot akan menghubungkan akun otomatis.</span>
+                @else
+                    <span>Tambahkan TELEGRAM_BOT_USERNAME di .env agar tombol buka bot bisa muncul.</span>
+                @endif
+                <code class="telegram-code">/start {{ $telegramLinkToken }}</code>
+            @endif
+        </div>
+
+        @if ($telegramBotUrl)
+            <a class="telegram-btn" href="{{ $telegramBotUrl }}" target="_blank" rel="noopener">Buka Bot</a>
+        @elseif (! $user->telegram_id)
+            <span class="telegram-btn disabled">Bot belum diset</span>
+        @endif
     </div>
 
     <div class="plans-grid">

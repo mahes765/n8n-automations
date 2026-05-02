@@ -96,4 +96,11 @@ class SubscriptionController extends Controller
             'days_left' => max(0, (int) ceil(now()->diffInDays($subscription->end_date, false))),
         ]);
     }
+
+    public function telegramStatus(string $telegramId, SubscriptionService $subscriptionService): JsonResponse
+    {
+        return response()->json(
+            $subscriptionService->getTelegramSubscriptionStatus($telegramId)
+        );
+    }
 }

@@ -23,6 +23,9 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'telegram_id',
+        'telegram_link_token',
+        'telegram_link_token_expires_at',
         'password',
     ];
 
@@ -45,6 +48,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'telegram_link_token_expires_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

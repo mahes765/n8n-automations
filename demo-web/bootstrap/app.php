@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
+            'n8n.api' => \App\Http\Middleware\AuthenticateN8nRequest::class,
             'subscription.active' => \App\Http\Middleware\CheckSubscriptionActive::class,
         ]);
 

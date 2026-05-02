@@ -44,4 +44,12 @@ return [
         'is_3ds' => env('MIDTRANS_IS_3DS', true),
     ],
 
+    'n8n' => [
+        'shared_secret' => env('N8N_SHARED_SECRET'),
+    ],
+
+    'telegram' => [
+        'bot_username' => env('TELEGRAM_BOT_USERNAME'),
+    ],
+
 ];

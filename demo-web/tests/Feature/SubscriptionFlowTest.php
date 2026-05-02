@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\Transaction;
 use App\Models\User;
@@ -170,6 +171,176 @@ class SubscriptionFlowTest extends TestCase
             'transaction_id' => $transaction->id,
             'status' => 'active',
         ]);
+    }
+
+    public function test_n8n_can_check_active_subscription_by_telegram_id(): void
+    {
+        config(['services.n8n.shared_secret' => 'test-n8n-secret']);
+
+        $user = User::factory()->create([
+            'telegram_id' => '123456789',
+        ]);
+        $plan = SubscriptionPlan::create([
+            'name' => '30 Hari',
+            'price' => 50000,
+            'duration_days' => 30,
+        ]);
+
+        Subscription::create([
+            'user_id' => $user->id,
+            'plan_id' => $plan->id,
+            'status' => Subscription::STATUS_ACTIVE,
+            'start_date' => now()->subDay(),
+            'end_date' => now()->addDays(29),
+        ]);
+
+        $this->withToken('test-n8n-secret')
+            ->getJson('/api/subscription/status/123456789')
+            ->assertOk()
+            ->assertJson([
+                'active' => true,
+                'telegram_id' => '123456789',
+                'user_id' => $user->id,
+                'status' => Subscription::STATUS_ACTIVE,
+                'plan' => '30 Hari',
+            ]);
+    }
+
+    public function test_n8n_subscription_status_requires_shared_secret(): void
+    {
+        config(['services.n8n.shared_secret' => 'test-n8n-secret']);
+
+        $this->getJson('/api/subscription/status/123456789')
+            ->assertUnauthorized();
+    }
+
+    public function test_n8n_subscription_status_rejects_unregistered_telegram_id(): void
+    {
+        config(['services.n8n.shared_secret' => 'test-n8n-secret']);
+
+        $this->withToken('test-n8n-secret')
+            ->getJson('/api/subscription/status/987654321')
+            ->assertOk()
+            ->assertJson([
+                'active' => false,
+                'telegram_id' => '987654321',
+                'user_id' => null,
+                'status' => 'not_registered',
+            ]);
+    }
+
+    public function test_n8n_subscription_status_expires_ended_subscription_without_cron(): void
+    {
+        config(['services.n8n.shared_secret' => 'test-n8n-secret']);
+
+        $user = User::factory()->create([
+            'telegram_id' => '1122334455',
+        ]);
+        $plan = SubscriptionPlan::create([
+            'name' => '7 Hari',
+            'price' => 25000,
+            'duration_days' => 7,
+        ]);
+        $subscription = Subscription::create([
+            'user_id' => $user->id,
+            'plan_id' => $plan->id,
+            'status' => Subscription::STATUS_ACTIVE,
+            'start_date' => now()->subDays(8),
+            'end_date' => now()->subDay(),
+        ]);
+
+        $this->withToken('test-n8n-secret')
+            ->getJson('/api/subscription/status/1122334455')
+            ->assertOk()
+            ->assertJson([
+                'active' => false,
+                'telegram_id' => '1122334455',
+                'user_id' => $user->id,
+                'status' => Subscription::STATUS_EXPIRED,
+            ]);
+
+        $this->assertDatabaseHas('subscriptions', [
+            'id' => $subscription->id,
+            'status' => Subscription::STATUS_EXPIRED,
+        ]);
+    }
+
+    public function test_n8n_can_link_telegram_id_with_link_token(): void
+    {
+        config(['services.n8n.shared_secret' => 'test-n8n-secret']);
+
+        $user = User::factory()->create([
+            'telegram_id' => null,
+            'telegram_link_token' => 'link-token-123',
+            'telegram_link_token_expires_at' => now()->addDay(),
+        ]);
+
+        $this->withToken('test-n8n-secret')
+            ->postJson('/api/telegram/link', [
+                'telegram_id' => '778899',
+                'link_token' => 'link-token-123',
+            ])
+            ->assertOk()
+            ->assertJson([
+                'linked' => true,
+                'status' => 'linked',
+                'telegram_id' => '778899',
+                'user_id' => $user->id,
+            ]);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'telegram_id' => '778899',
+            'telegram_link_token' => null,
+            'telegram_link_token_expires_at' => null,
+        ]);
+    }
+
+    public function test_n8n_cannot_link_with_expired_link_token(): void
+    {
+        config(['services.n8n.shared_secret' => 'test-n8n-secret']);
+
+        User::factory()->create([
+            'telegram_id' => null,
+            'telegram_link_token' => 'expired-token-123',
+            'telegram_link_token_expires_at' => now()->subMinute(),
+        ]);
+
+        $this->withToken('test-n8n-secret')
+            ->postJson('/api/telegram/link', [
+                'telegram_id' => '778899',
+                'link_token' => 'expired-token-123',
+            ])
+            ->assertUnprocessable()
+            ->assertJson([
+                'linked' => false,
+                'status' => 'invalid_or_expired_token',
+            ]);
+    }
+
+    public function test_n8n_cannot_link_same_telegram_id_to_two_users(): void
+    {
+        config(['services.n8n.shared_secret' => 'test-n8n-secret']);
+
+        User::factory()->create([
+            'telegram_id' => '778899',
+        ]);
+        User::factory()->create([
+            'telegram_id' => null,
+            'telegram_link_token' => 'second-user-token',
+            'telegram_link_token_expires_at' => now()->addDay(),
+        ]);
+
+        $this->withToken('test-n8n-secret')
+            ->postJson('/api/telegram/link', [
+                'telegram_id' => '778899',
+                'link_token' => 'second-user-token',
+            ])
+            ->assertUnprocessable()
+            ->assertJson([
+                'linked' => false,
+                'status' => 'telegram_id_already_linked',
+            ]);
     }
 
     private function mockMidtransCheckout(): void
