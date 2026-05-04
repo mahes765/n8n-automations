@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import "./globals.css";
 import { getCurrentUser } from "@/lib/auth";
 import LogoutButton from "@/app/logout-button";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Subscription Bot",

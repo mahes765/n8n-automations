@@ -1,7 +1,7 @@
+import { createLinkToken } from "@/lib/auth";
 import { addDays } from "@/lib/dates";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { User } from "@/lib/types";
-import { createLinkToken } from "@/lib/auth";
 
 export async function ensureTelegramLinkToken(user: User): Promise<string> {
   if (
@@ -85,7 +85,7 @@ export async function linkTelegram(telegramId: string, linkToken: string) {
     };
   }
 
-  await supabaseAdmin
+  const { error: updateError } = await supabaseAdmin
     .from("users")
     .update({
       telegram_id: cleanTelegramId,
@@ -93,6 +93,15 @@ export async function linkTelegram(telegramId: string, linkToken: string) {
       telegram_link_token_expires_at: null,
     })
     .eq("id", targetUser.id);
+
+  if (updateError) {
+    console.error("Error linking Telegram:", updateError);
+    return {
+      linked: false,
+      status: "update_failed",
+      message: "Gagal menyimpan Telegram ID ke database.",
+    };
+  }
 
   return {
     linked: true,
