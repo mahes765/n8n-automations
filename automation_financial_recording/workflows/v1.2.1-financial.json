@@ -1,0 +1,1568 @@
+{
+  "name": "automation_financial_recording",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "download": true,
+          "imageSize": "large"
+        }
+      },
+      "id": "bcb98186-3141-4e92-a76a-f5af71ab7d23",
+      "name": "trigger_telegram_receiveMessage",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -368,
+        2512
+      ],
+      "webhookId": "b4f58112-fd55-4245-98a3-d8313d865660",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $('trigger_telegram_receiveMessage').first().json.message;\n\nlet inputType = null;\nlet inputData = null;\n\n// TEXT\nif (message.text && message.text.trim() !== \"\") {\n  inputType = \"text\";\n  inputData = message.text.trim();\n}\n\n// IMAGE\nelse if (message.photo && message.photo.length > 0) {\n  inputType = \"image\";\n  const photo = message.photo.at(-1);\n  inputData = photo.file_id;\n}\n\n// AUDIO / VOICE\nelse if (message.audio || message.voice) {\n  inputType = \"audio\";\n  inputData = message.audio?.file_id || message.voice?.file_id;\n}\n\n// FALLBACK ERROR\nelse {\n  throw new Error(\"Unsupported input type. Please send text, image, or audio.\");\n}\n\nreturn {\n  inputType,\n  inputData,\n  chatId: message.chat.id,\n  rawMessage: message\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        2640
+      ],
+      "id": "2360b19b-aa88-4f65-9a72-48a1f013fb54",
+      "name": "proc_input_detectType"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.inputType }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f586a389-197b-4726-b662-c91edc0bd22f"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "0"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "61668664-4c8c-4714-9447-718e90a8d0e9",
+                    "leftValue": "={{ $json.inputType }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "1"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "476bac88-617e-47c9-b1b5-8dfa63eef1dc",
+                    "leftValue": "={{ $json.inputType }}",
+                    "rightValue": "audio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        1120,
+        2624
+      ],
+      "id": "5b41a5c7-176f-439d-bbee-31779103070c",
+      "name": "switch_input_routeByType"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3bf3371d-a5ab-48ea-aa22-9c2695293b0d",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": "={{ $json.data.approved }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        2640
+      ],
+      "id": "2355d065-2d2c-41b7-b754-628b90b270b2",
+      "name": "if_user_confirmationCheck"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('trigger_telegram_receiveMessage').item.json.message.chat.id }}",
+        "text": "Silakan tunggu, data sedang diproses......",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        2448
+      ],
+      "id": "a499b0da-d756-44e7-b0a5-37e2da855917",
+      "name": "io_telegram_sendProcessingMessage",
+      "webhookId": "9afed1d8-9dd0-4083-b897-a00d949eefa3",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('trigger_telegram_receiveMessage').item.json.message.chat.id }}",
+        "message": "=Silakan masukan penyesuaian untuk data yang ingin diperbarui. \n\n- *Judul:* {{ $('ai_expense_extractStructuredData').item.json.output.description }}\n- *Jumlah:* Rp {{ $('ai_expense_extractStructuredData').item.json.output.amount }}\n- *Tanggal:* {{ $('ai_expense_extractStructuredData').item.json.output.date }}\n- *Merchant:* {{ $('ai_expense_extractStructuredData').item.json.output.merchant }}\n- *Kategori:* {{ $('ai_expense_extractStructuredData').item.json.output.category }}\n- *Wallet:* {{ $('ai_expense_extractStructuredData').item.json.output.wallet }}\n- *Project:* {{ $('ai_expense_extractStructuredData').item.json.output.Project }}\n- *Catatan:* {{ $('ai_expense_extractStructuredData').item.json.output.Notes }}\n- *Item belanjaan:* {{ $('ai_expense_extractStructuredData').item.json.output.massage_text }}\n\nKirimkan data yang perlu diperbaiki dengan format:\n\n`Judul: nilai baru, Jumlah: nilai baru, kategori: nilai baru`\n\nContoh: `Judul: Makan siang, Jumlah: 50000`",
+        "responseType": "freeText",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3104,
+        2736
+      ],
+      "id": "1f724b68-a09c-4ae1-b85d-94f5852a7b44",
+      "name": "io_telegram_requestDataCorrection",
+      "webhookId": "9afed1d8-9dd0-4083-b897-a00d949eefa3",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('trigger_telegram_receiveMessage').item.json.message.chat.id }}",
+        "message": "=Sebelum dikelola dan dicatat, pastikan data dalam pesan ini sudah benar. Apakah sudah sesuai?",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        2640
+      ],
+      "id": "f9f8799a-a151-4461-b799-768cca7b9c2f",
+      "name": "io_telegram_requestConfirmation",
+      "webhookId": "b8ec989e-f7fd-473e-928e-4396d656285a",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('trigger_telegram_receiveMessage').item.json.message.chat.id }}",
+        "text": "Terima kasih atas konfirmasinya. Data belum sesuai, silakan kirim ulang dengan informasi yang benar.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        2832
+      ],
+      "id": "564d8acf-9c6a-49fe-9105-5ddd83be5f8b",
+      "name": "io_telegram_sendRetryMessage",
+      "webhookId": "9afed1d8-9dd0-4083-b897-a00d949eefa3",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('trigger_telegram_receiveMessage').item.json.message.chat.id }}",
+        "text": "=Berikut merupakan data final:\n\n- *Judul:* {{ $('proc_expense_validateData').item.json.title }}\n- *Jumlah:* Rp {{ $('proc_expense_validateData').item.json.amount }}\n- *Tanggal:* {{ $('proc_expense_validateData').item.json.date }}\n- *Merchant:* {{ $('proc_expense_validateData').item.json.merchant }}\n- *Kategori:* {{ $('proc_expense_validateData').item.json.category }}\n- *Wallet:* {{ $('proc_expense_validateData').item.json.wallet }}\n- *Project:* {{ $('proc_expense_validateData').item.json.project }}\n- *Catatan:* {{ $('proc_expense_validateData').item.json.notes }}\n- *Item belanjaan:* \n{{ $('proc_expense_validateData').item.json.items }}\n\nData sudah berhasil disimpan di Notion 📁 Jika ingin mencatat data lainnya, silakan kirim pesan kembali 😊",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3808,
+        2560
+      ],
+      "id": "b6d7a183-4647-4790-a56f-3a2072c6b695",
+      "name": "io_telegram_sendFinalResult",
+      "webhookId": "9afed1d8-9dd0-4083-b897-a00d949eefa3",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('trigger_telegram_receiveMessage').item.json.message.chat.id }}",
+        "message": "=*Data pengeluaran yang saya tangkap:*\n\n- *Judul:* {{ $json.output.description }}\n- *Jumlah:* Rp {{ $json.output.amount }}\n- *Tanggal:* {{ $json.output.date }}\n- *Merchant:* {{ $json.output.merchant }}\n- *Kategori:* {{ $json.output.category }}\n- *Wallet:* {{ $json.output.wallet }}\n- *Kategori Perusahaan:* {{ $json.output.Company }}\n- *Project:* {{ $json.output.Project }}\n- *Catatan:* {{ $json.output.Notes}}\n- *Item belanjaan:* \n{{ $json.output.items }}\n\n**Apakah data sudah sesuai?**\n\n✅ Klik *approve* untuk langsung menyimpan ke Notion.\n✏️ Klik *decline* jika ada data yang perlu diperbaiki, lalu kirimkan revisi dengan format berikut:\n`judul: nilai baru, jumlah: nilai baru, kategori: nilai baru`\n\n**Contoh:**\n`judul: Makan siang, jumlah: 50000, kategori: Makanan`\n\nJika hanya ingin mengubah satu field, cukup kirimkan:\n`total: 400000`",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2624,
+        2640
+      ],
+      "id": "d705c886-7890-4112-a70c-8a074bcc9a41",
+      "name": "io_telegram_sendExtractPreview",
+      "webhookId": "b8ec989e-f7fd-473e-928e-4396d656285a",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('trigger_telegram_receiveMessage').item.json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        2832
+      ],
+      "id": "1f1697fe-0f05-4bd2-9750-f6f7bc970022",
+      "name": "io_telegram_fetchAudio",
+      "webhookId": "38dc47af-d87b-4db6-b76a-7464c872c850",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('trigger_telegram_receiveMessage').item.json.message.photo[3].file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        2640
+      ],
+      "id": "c0d2acda-e28d-4ec7-8d1b-1e2c6dca054f",
+      "name": "io_telegram_fetchImage",
+      "webhookId": "61782136-3cfa-4842-9206-47359b18d8e7",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "=const prompt = `\nEkstrak data dari gambar struk secara AKURAT.\n\nAturan:\n- Hanya ambil data yang terlihat.\n- Dilarang mengarang.\n- Jika tidak ada, isi null.\n- Angka tanpa simbol (Rp, titik, koma).\n\nAmbil data:\n- nama: label singkat, jika tidak jelas null\n- harga_total: total akhir\n- tanggal: YYYY-MM-DD\n- merchant: nama toko\n- kategori: Groceries | Elektronik | Pakaian | Makanan/Minuman | Kesehatan | Transportasi | Lainnya\n- items: \"Item - Harga\", jika tidak ada harga tetap tulis item\n\nOutput:\nJSON valid saja, tanpa teks tambahan.\n\n{\n  \"nama\": string || null,\n  \"harga_total\": number | null,\n  \"tanggal\": string | null,\n  \"merchant\": string | null,\n  \"kategori\": string,\n  \"items\": string | null\n}\n`;",
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        2640
+      ],
+      "id": "f899fed4-1f67-4f94-8de3-5c4b6e628324",
+      "name": "ai_media_extractImageReceipt",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VR8OntYtmRO1TcRI",
+          "name": "Google Gemini(PaLM) Api account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "=const prompt = `\nAnda adalah AI yang bertugas mengekstrak data belanja dari voice note secara AKURAT.\n\nInput:\nVOICE NOTE: \nAturan utama:\n- Hanya gunakan informasi yang benar-benar disebutkan dalam voice note.\n- DILARANG mengarang, menebak, atau menambahkan informasi.\n- Jika data tidak disebutkan, isi dengan null.\n- Semua angka harus berupa angka tanpa simbol (tanpa Rp, titik, koma, dll).\n- Jangan menggunakan tanggal hari ini jika tanggal tidak disebutkan.\n\nData yang harus diekstrak:\n\n1. nama:\n   - Buat label singkat berdasarkan konteks belanja jika disebutkan.\n   - Jika tidak jelas, isi null.\n\n2. harga_total:\n   - Total belanja jika disebutkan.\n   - Jika tidak ada, isi null.\n\n3. tanggal:\n   - Format YYYY-MM-DD.\n   - Hanya isi jika disebutkan secara jelas.\n\n4. merchant:\n   - Nama toko/tempat belanja jika disebutkan.\n   - Jangan menebak.\n\n5. kategori:\n   - Pilih salah satu:\n     Groceries | Elektronik | Pakaian | Makanan | Kesehatan | Transportasi | Lainnya\n   - Jika tidak jelas, gunakan \"Lainnya\".\n\n6. items:\n   - Daftar item yang disebutkan dalam voice note.\n   - Format: \"Nama Item - Jumlah - Harga\"\n   - Jika harga atau jumlah tidak disebutkan, tetap tulis yang tersedia.\n   - Jika tidak ada item, isi null.\n\nOutput:\n- WAJIB dalam format JSON valid.\n- Tanpa penjelasan tambahan.\n- Tanpa teks di luar JSON.\n\nFormat:\n{\n  \"nama\": string | null,\n  \"harga_total\": number | null,\n  \"tanggal\": string | null,\n  \"merchant\": string | null,\n  \"kategori\": string,\n  \"items\": string | null\n}\n`; ",
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        2832
+      ],
+      "id": "4852fba5-3420-4ff9-89bb-d4afe4bd7554",
+      "name": "ai_media_extractAudioExpense",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VR8OntYtmRO1TcRI",
+          "name": "Google Gemini(PaLM) Api account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "extractedText",
+              "value": "={{ $json.inputData }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "330feb00-2fb4-448d-9ab5-5a365da41e58",
+      "name": "proc_text_prepareInput",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1568,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "2bc9ba51-f77e-4207-b045-acc07b93cafe",
+      "name": "proc_text_mergeInputs",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1792,
+        2624
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw =\n  $input.first().json.extractedText ||\n  $input.first().json.text ||\n  $input.first().json.content?.parts?.[0]?.text ||\n  \"\";\n\nlet cleaned = raw.trim();\n\nif (cleaned.startsWith(\"```json\")) {\n  cleaned = cleaned.replace(/^```json\\s*/, \"\").replace(/```$/, \"\");\n} else if (cleaned.startsWith(\"```\")) {\n  cleaned = cleaned.replace(/^```\\s*/, \"\").replace(/```$/, \"\");\n}\n\ncleaned = cleaned.replace(/:\\s*\"null\"/gi, ': \"\"');\n\nlet finalText = cleaned;\n\ntry {\n  const parsed = JSON.parse(cleaned);\n\n  if (parsed.wallet === null) parsed.wallet = \"\";\n  if (parsed.Project === null) parsed.Project = \"\";\n\n  finalText = JSON.stringify(parsed);\n\n} catch (e) {\n}\n\nreturn {\n  extractedText: finalText.trim()\n};"
+      },
+      "id": "187e4acb-7167-449b-a7de-e7965785e7f9",
+      "name": "proc_text_cleanJson",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2032,
+        2640
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2272,
+        2832
+      ],
+      "id": "a7f3c78f-3864-479a-856d-9bd192ec8184",
+      "name": "ai_llm_geminiEngine",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VR8OntYtmRO1TcRI",
+          "name": "Google Gemini(PaLM) Api account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "=Data asli:\n{{ JSON.stringify($(\"ai_expense_extractStructuredData\").item.json.output) }}\n\nPembaruan dari user:\n{{ $json.data.text }}\n\nGabungkan data asli dengan pembaruan dari user. Jika user memberikan nilai baru untuk field tertentu, gunakan nilai baru tersebut. Jika tidak, pertahankan nilai asli. Pastikan format sesuai dengan struktur yang diinginkan.",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "description",
+              "description": "Brief description of the expense or purchase (gunakan nilai dari user jika ada field title/description dalam pembaruan)",
+              "required": true
+            },
+            {
+              "name": "amount",
+              "type": "number",
+              "description": "Total amount in numeric format without currency symbols",
+              "required": true
+            },
+            {
+              "name": "date",
+              "type": "date",
+              "description": "Date in YYYY-MM-DD format"
+            },
+            {
+              "name": "merchant",
+              "description": "Store or merchant name"
+            },
+            {
+              "name": "category",
+              "description": "Expense category (Groceries, Payroll, Operational Fix Cost, Operational Variabel Cost)"
+            },
+            {
+              "name": "items",
+              "description": "List of purchased items with prices"
+            },
+            {
+              "name": "Notes",
+              "description": "Additional notes or warranty details"
+            },
+            {
+              "name": "Type",
+              "description": "Transaction type: expense or income"
+            },
+            {
+              "name": "wallet",
+              "description": "\"wallet\" must be a string or null, extracted from input; do not invent values."
+            },
+            {
+              "name": "company",
+              "description": "Classify the company entity from the text as either {dako} or {dako_studio}. If no company is mentioned, return {dako}. Provide the result only"
+            },
+            {
+              "name": "project",
+              "description": "Identify and list all projects mentioned in the text. If none are found, return 'null' or an empty string."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "449f23b7-da9b-47b1-81d9-4076fe5777e3",
+      "name": "ai_expense_mergeUserCorrection",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        3360,
+        2736
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        3376,
+        2976
+      ],
+      "id": "0e75ea3f-84ec-40a5-a0fb-d8701d951ea6",
+      "name": "ai_llm_geminiEngine1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VR8OntYtmRO1TcRI",
+          "name": "Google Gemini(PaLM) Api account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "12881431-7a12-4e46-9d6e-13b728878d89",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": "=",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2848,
+        2640
+      ],
+      "id": "d5010d40-e61c-4c8a-94e9-65f35a4bdc86",
+      "name": "if_expense_approvalCheck"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nfunction validateString(value, defaultValue) {\n    if (value === null || value === undefined || value === \"null\" || value === \"\") {\n        return defaultValue;\n    }\n    return value;\n}\n\nfunction validateNumber(value, defaultValue) {\n    if (value === null || value === undefined || value === \"null\" || value === \"\" || isNaN(value)) {\n        return defaultValue;\n    }\n    return value;\n}\n\nconst result = {\n    title: validateString(data.title, \"Transaksi \" + new Date().toLocaleDateString('id-ID')),\n    amount: validateNumber(data.amount, 0),\n    date: validateString(data.date, new Date().toISOString().split('T')[0]),\n    merchant: validateString(data.merchant, \"Tidak diketahui\"),\n    category: validateString(data.category, \"Lainnya\"),\n    items: validateString(data.items, \"-\"),\n    notes: validateString(data.Notes, \"-\"),\n    type: validateString(data.Type, \"-\"),\n    wallet: validateString(data.Wallet, \"-\"),\n    company: validateString(data.Company, \"-\"),\n    project: validateString(data.Project, \"-\")\n};\n\nconsole.log(\"Original data:\", JSON.stringify(data, null, 2));\nconsole.log(\"Validated data:\", JSON.stringify(result, null, 2));\n\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3344,
+        2560
+      ],
+      "id": "acb66817-8694-49c5-b372-7d7f491bc2f9",
+      "name": "proc_expense_validateData"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "title",
+              "value": "={{ $('ai_expense_extractStructuredData').item.json.output.description }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "amount",
+              "value": "={{ $('ai_expense_extractStructuredData').item.json.output.amount }}",
+              "type": "number"
+            },
+            {
+              "id": "3",
+              "name": "date",
+              "value": "={{ $('ai_expense_extractStructuredData').item.json.output.date }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "merchant",
+              "value": "={{ $('ai_expense_extractStructuredData').item.json.output.merchant }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "category",
+              "value": "={{ $('ai_expense_extractStructuredData').item.json.output.category }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "items",
+              "value": "={{ $('ai_expense_extractStructuredData').item.json.output.items }}",
+              "type": "string"
+            },
+            {
+              "id": "39af3118-ffe5-404f-91bd-2e873113755a",
+              "name": "Notes",
+              "value": "={{ $('ai_expense_extractStructuredData').item.json.output.Notes }}",
+              "type": "string"
+            },
+            {
+              "id": "464630c1-e3f6-4808-9350-4fe7587c42a3",
+              "name": "Type",
+              "value": "={{ $('ai_expense_extractStructuredData').item.json.output.Type }}",
+              "type": "string"
+            },
+            {
+              "id": "5654255c-4996-48be-87e6-2c583db17f4f",
+              "name": "Wallet",
+              "value": "={{ $('ai_expense_extractStructuredData').item.json.output.wallet }}",
+              "type": "string"
+            },
+            {
+              "id": "0dd68eb0-60ae-4cd1-9d65-dc5b0b9d7ff9",
+              "name": "Company",
+              "value": "={{ $('ai_expense_extractStructuredData').item.json.output.Company }}",
+              "type": "string"
+            },
+            {
+              "id": "af985fe4-1e79-4724-9c2b-07d5b779e333",
+              "name": "Project",
+              "value": "={{ $('ai_expense_extractStructuredData').item.json.output.Project }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b78fc2ad-05ce-4e75-8ad4-5816c8c6ce3e",
+      "name": "proc_expense_formatNotion",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3104,
+        2560
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "3275e83d-e4d3-80f3-9308-d7c9b48989da",
+          "mode": "list",
+          "cachedResultName": "Financial Management System",
+          "cachedResultUrl": "https://www.notion.so/3275e83de4d380f39308d7c9b48989da"
+        },
+        "title": "={{ $json.title }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Amount (Rp)|number",
+              "type": "number",
+              "numberValue": "={{ $json.amount }}"
+            },
+            {
+              "key": "Date|date",
+              "type": "date",
+              "date": "={{ $json.date }}",
+              "timezone": "={{ $json.date }}"
+            },
+            {
+              "key": "Merchant|rich_text",
+              "type": "rich_text",
+              "textContent": "={{ $json.merchant }}"
+            },
+            {
+              "key": "Category|select",
+              "type": "select",
+              "selectValue": "={{ $json.category }}"
+            },
+            {
+              "key": "Items|rich_text",
+              "type": "rich_text",
+              "textContent": "={{ $json.items }}"
+            },
+            {
+              "key": "Notes|rich_text",
+              "textContent": "={{ $json.notes }}"
+            },
+            {
+              "key": "Transaction Type|select",
+              "selectValue": "={{ $json.type }}"
+            },
+            {
+              "key": "Wallet|rich_text",
+              "textContent": "={{ $json.wallet }}"
+            },
+            {
+              "key": "Project|rich_text",
+              "textContent": "={{ $json.project }}"
+            },
+            {
+              "key": "Company|select",
+              "selectValue": "={{ $json.company }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f7ad9bbb-ee53-4bde-89ae-260703c4d5f5",
+      "name": "db_notion_createExpenseRecord",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        3584,
+        2560
+      ],
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "credentials": {
+        "notionApi": {
+          "id": "9e0EWRwcIBreuLxa",
+          "name": "Notion account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "title",
+              "value": "={{ $json.output.description }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "amount",
+              "value": "={{ $json.output.amount }}",
+              "type": "number"
+            },
+            {
+              "id": "3",
+              "name": "date",
+              "value": "={{ $json.output.date }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "merchant",
+              "value": "={{ $json.output.merchant }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "category",
+              "value": "={{ $json.output.category }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "items",
+              "value": "={{ $json.output.items }}",
+              "type": "string"
+            },
+            {
+              "id": "39af3118-ffe5-404f-91bd-2e873113755a",
+              "name": "Notes",
+              "value": "={{ $json.output.Notes }}",
+              "type": "string"
+            },
+            {
+              "id": "464630c1-e3f6-4808-9350-4fe7587c42a3",
+              "name": "Type",
+              "value": "={{ $json.output.Type }}",
+              "type": "string"
+            },
+            {
+              "id": "5654255c-4996-48be-87e6-2c583db17f4f",
+              "name": "Wallet",
+              "value": "={{ $json.output.wallet }}",
+              "type": "string"
+            },
+            {
+              "id": "0dd68eb0-60ae-4cd1-9d65-dc5b0b9d7ff9",
+              "name": "Company",
+              "value": "={{ $json.output.company }}",
+              "type": "string"
+            },
+            {
+              "id": "af985fe4-1e79-4724-9c2b-07d5b779e333",
+              "name": "Project",
+              "value": "={{ $json.output.project }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bd403ce6-c936-4f83-8204-5f48c999d858",
+      "name": "proc_expense_formatNotionUpdated",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3712,
+        2736
+      ]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.extractedText }}\n\nIMPORTANT:\n- Never return null.\n- Always return empty string (\"\") if a value is missing.\n- All fields must always be strings unless explicitly defined as numbers.",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "amount",
+              "type": "number",
+              "description": "Extract all monetary values in Indonesian Rupiah from the text (e.g., \"50rb\", \"50ribu\", \"Rp 50.000\"), convert each into a numeric value, and return the total sum."
+            },
+            {
+              "name": "description",
+              "description": "Brief description of the expense or purchase"
+            },
+            {
+              "name": "date",
+              "type": "date",
+              "description": "Date of purchase in YYYY-MM-DD format. If not found in text, use today's date"
+            },
+            {
+              "name": "merchant",
+              "description": "Store or merchant name where purchase was made"
+            },
+            {
+              "name": "category",
+              "description": "Expense category (Groceries, Payroll, Operational Fix Cost, Operational Variabel Cost)"
+            },
+            {
+              "name": "items",
+              "description": "List each purchased item and its price on a new line"
+            },
+            {
+              "name": "Notes",
+              "description": "Warranty details or a brief justification for the purchase"
+            },
+            {
+              "name": "Type",
+              "description": "Analyze the given input and classify it as either an \"expense\" or \"income\" category."
+            },
+            {
+              "name": "wallet",
+              "description": "Return ONLY one of: Cash, Digital Bank, Traditional Bank. If not found, return an empty string (\"\")."
+            },
+            {
+              "name": "Company",
+              "description": "Classify the company entity from the text as either {dako} or {dako_studio}. If no company is mentioned, return {dako}. Provide the result only"
+            },
+            {
+              "name": "Project",
+              "description": "Identify and list all projects mentioned in the text. If none are found, return an empty string (\"\")."
+            }
+          ]
+        },
+        "options": {
+          "systemPromptTemplate": "You are an expert data extraction system. Return ONLY valid JSON without any markdown formatting, code blocks, or additional text. Do not wrap the response in ```json or ``` tags."
+        }
+      },
+      "id": "5bda6d2a-047b-4849-aba2-e1154881959e",
+      "name": "ai_expense_extractStructuredData",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        2240,
+        2640
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://n8n-automations-liard.vercel.app/api/subscription/status/{{ $json.message.from.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        2656
+      ],
+      "id": "0a7b9b58-df1d-46fb-a73a-4d158639ba0c",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gpWPco1z0pL6Ek4E",
+          "name": "Header Auth account"
+        },
+        "httpBearerAuth": {
+          "id": "wcXypj3NvVwkgnYa",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f7b540d5-095f-43d5-86aa-8b10a2f33c5c",
+              "leftValue": "={{ $json.active }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        176,
+        2656
+      ],
+      "id": "7820084a-6887-4b33-a873-b1f4e37e058f",
+      "name": "if_subscription_isActive"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('trigger_telegram_receiveMessage').item.json.message.chat.id }}",
+        "text": "=⚠️ *Subscription Tidak Aktif*\n\nMaaf, subscription Anda sudah tidak aktif atau telah expired.\n\nUntuk melanjutkan menggunakan layanan bot ini, silakan perpanjang subscription Anda melalui:\n\n🔗 https://n8n-automations-liard.vercel.app\n\nJika Anda merasa ini adalah kesalahan, silakan hubungi support kami.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "52272747-21f3-46c6-b61a-6e95b56b6d4f",
+      "name": "io_telegram_sendSubscriptionExpired",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        2832
+      ],
+      "webhookId": "227357bb-39a5-4d1d-84e3-9b034c4d9c13",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"CODE_extractToken\").item.json.chatId }}",
+        "text": "✅ Telegram berhasil terhubung ke akun Anda.",
+        "additionalFields": {}
+      },
+      "id": "1e96488f-2bd5-40d1-ae38-8685dc9bc9e7",
+      "name": "TELEGRAM_sendLinkSuccess",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        704,
+        2048
+      ],
+      "webhookId": "be42c502-ef15-4d41-9d09-21fec131aef1",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"CODE_extractToken\").item.json.chatId }}",
+        "text": "❌ Gagal menghubungkan akun. Token tidak valid atau sudah expired.",
+        "additionalFields": {}
+      },
+      "id": "504ef927-e9d4-47ff-b0b0-75e20f559763",
+      "name": "TELEGRAM_sendLinkFailed",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        704,
+        2288
+      ],
+      "webhookId": "f9385fd8-122b-4a1a-9859-223b67800230",
+      "credentials": {
+        "telegramApi": {
+          "id": "g80HobGKXUPspMbL",
+          "name": "Telegram account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "60b6b59f-5798-4440-8a6a-6bbe17b259d2",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "/start ",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -192,
+        2512
+      ],
+      "id": "706316b2-31e0-4fae-8473-50eb3cd3d1f7",
+      "name": "IF_isLinking"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.message.text;\nconst token = text.split(\" \")[1];\n\nreturn {\n  telegram_id: $input.first().json.message.from.id.toString(),\n  link_token: token,\n  chatId: $input.first().json.message.chat.id\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        2368
+      ],
+      "id": "ead749a1-1c45-41bf-b318-718442f922ae",
+      "name": "CODE_extractToken"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n-automations-liard.vercel.app/api/telegram/link",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "telegram_id",
+              "value": "={{ $json.telegram_id }}"
+            },
+            {
+              "name": "link_token",
+              "value": "={{ $json.link_token }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        240,
+        2368
+      ],
+      "id": "8db4e127-1e91-49af-9e77-68c532a7234a",
+      "name": "HTTP_linkTelegram",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "wcXypj3NvVwkgnYa",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b057f1fc-a68e-41b4-9cb7-8c66b2449140",
+              "leftValue": "={{ $json.linked }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        432,
+        2368
+      ],
+      "id": "f9abde70-e790-44e9-bae0-7f9c778d9dec",
+      "name": "IF_linkSuccess"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "trigger_telegram_receiveMessage": {
+      "main": [
+        [
+          {
+            "node": "IF_isLinking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "proc_input_detectType": {
+      "main": [
+        [
+          {
+            "node": "switch_input_routeByType",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "switch_input_routeByType": {
+      "main": [
+        [
+          {
+            "node": "proc_text_prepareInput",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "io_telegram_fetchImage",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "io_telegram_fetchAudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_user_confirmationCheck": {
+      "main": [
+        [
+          {
+            "node": "io_telegram_sendProcessingMessage",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "proc_input_detectType",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "io_telegram_sendRetryMessage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "io_telegram_requestDataCorrection": {
+      "main": [
+        [
+          {
+            "node": "ai_expense_mergeUserCorrection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "io_telegram_requestConfirmation": {
+      "main": [
+        [
+          {
+            "node": "if_user_confirmationCheck",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "io_telegram_sendExtractPreview": {
+      "main": [
+        [
+          {
+            "node": "if_expense_approvalCheck",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "io_telegram_fetchAudio": {
+      "main": [
+        [
+          {
+            "node": "ai_media_extractAudioExpense",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "io_telegram_fetchImage": {
+      "main": [
+        [
+          {
+            "node": "ai_media_extractImageReceipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai_media_extractImageReceipt": {
+      "main": [
+        [
+          {
+            "node": "proc_text_mergeInputs",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "ai_media_extractAudioExpense": {
+      "main": [
+        [
+          {
+            "node": "proc_text_mergeInputs",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "proc_text_prepareInput": {
+      "main": [
+        [
+          {
+            "node": "proc_text_mergeInputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "proc_text_mergeInputs": {
+      "main": [
+        [
+          {
+            "node": "proc_text_cleanJson",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "proc_text_cleanJson": {
+      "main": [
+        [
+          {
+            "node": "ai_expense_extractStructuredData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai_llm_geminiEngine": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ai_expense_extractStructuredData",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai_expense_mergeUserCorrection": {
+      "main": [
+        [
+          {
+            "node": "proc_expense_formatNotionUpdated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai_llm_geminiEngine1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ai_expense_mergeUserCorrection",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_expense_approvalCheck": {
+      "main": [
+        [
+          {
+            "node": "proc_expense_formatNotion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "io_telegram_requestDataCorrection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "proc_expense_validateData": {
+      "main": [
+        [
+          {
+            "node": "db_notion_createExpenseRecord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "proc_expense_formatNotion": {
+      "main": [
+        [
+          {
+            "node": "proc_expense_validateData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "db_notion_createExpenseRecord": {
+      "main": [
+        [
+          {
+            "node": "io_telegram_sendFinalResult",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "proc_expense_formatNotionUpdated": {
+      "main": [
+        [
+          {
+            "node": "proc_expense_validateData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai_expense_extractStructuredData": {
+      "main": [
+        [
+          {
+            "node": "io_telegram_sendExtractPreview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "if_subscription_isActive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_subscription_isActive": {
+      "main": [
+        [
+          {
+            "node": "io_telegram_requestConfirmation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "io_telegram_sendSubscriptionExpired",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_isLinking": {
+      "main": [
+        [
+          {
+            "node": "CODE_extractToken",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_extractToken": {
+      "main": [
+        [
+          {
+            "node": "HTTP_linkTelegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_linkTelegram": {
+      "main": [
+        [
+          {
+            "node": "IF_linkSuccess",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_linkSuccess": {
+      "main": [
+        [
+          {
+            "node": "TELEGRAM_sendLinkSuccess",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "TELEGRAM_sendLinkFailed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5256e928-8b5c-4b4c-b3d6-b97c0278e168",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "55610ab40ec438f7d6aa8007bfeae732bdf2a7ca0d8e42d7155a97bc98c9b2e4"
+  },
+  "id": "XyopWW5x4918Lt3n",
+  "tags": []
+}
