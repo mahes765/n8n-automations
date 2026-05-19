@@ -1,0 +1,619 @@
+{
+    "name": "WF_Social_Media_Analyst_v2",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "medsos-analysis-webhook",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                -1632,
+                736
+            ],
+            "id": "webhook-input",
+            "name": "Webhook Input (from Next.js)"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Parse webhook dari Next.js checkout\nconst body = $json.body || $json;\nreturn [{\n  json: {\n    request_id: body.request_id,\n    user_id: body.user_id,\n    entitlement_id: body.entitlement_id,\n    platform: body.platform,\n    profile_url: body.profile_url,\n    callback_token: body.callback_token,\n    progress_url: body.progress_url,\n    result_url: body.result_url,\n    error_url: body.error_url,\n    timestamp: new Date().toISOString()\n  }\n}];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -1424,
+                736
+            ],
+            "id": "parse-webhook",
+            "name": "Parse Webhook Data"
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{ $env.NEXT_APP_URL }}/api/medsos/entitlement/{{ $json.entitlement_id }}",
+                "options": {
+                    "headers": {
+                        "Authorization": "Bearer {{ $env.N8N_AUTH_TOKEN }}"
+                    }
+                }
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -1168,
+                560
+            ],
+            "id": "check-entitlement-active",
+            "name": "Check Entitlement Status"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 2
+                    },
+                    "conditions": [
+                        {
+                            "id": "status-check",
+                            "leftValue": "={{ $json.status }}",
+                            "rightValue": "active",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [
+                -960,
+                560
+            ],
+            "id": "if-entitlement-active",
+            "name": "Is Entitlement Active?"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Check quota available\nconst quota_used = $json.quota_used || 0;\nconst quota_total = $json.quota_total || 0;\nconst quota_available = quota_used < quota_total;\n\nreturn [{\n  json: {\n    ...JSON.parse($('Parse Webhook Data').first().json.json),\n    entitlement: $json,\n    quota_available: quota_available,\n    quota_remaining: quota_total - quota_used\n  }\n}];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -768,
+                560
+            ],
+            "id": "check-quota",
+            "name": "Check Quota Available"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 2
+                    },
+                    "conditions": [
+                        {
+                            "id": "quota-check",
+                            "leftValue": "={{ $json.quota_available }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "true",
+                                "singleValue": true
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [
+                -560,
+                560
+            ],
+            "id": "if-quota-available",
+            "name": "Has Quota?"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Validate Instagram URL format\nconst profile_url = $json.profile_url || \"\";\nconst ig_regex = /https:\\/\\/(www\\.)?instagram\\.com\\/([a-zA-Z0-9_\\.]+)\\/?/;\nconst match = profile_url.match(ig_regex);\n\nif (!match || !match[2]) {\n  return [{\n    json: { \n      valid: false, \n      error: \"Format Instagram URL tidak valid. Gunakan: https://instagram.com/username\"\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...JSON.parse($('Check Quota Available').first().json.json),\n    valid: true,\n    ig_username: match[2],\n    ig_profile_url: `https://instagram.com/${match[2]}`\n  }\n}];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -368,
+                560
+            ],
+            "id": "validate-ig-url",
+            "name": "Validate IG URL"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 2
+                    },
+                    "conditions": [
+                        {
+                            "id": "url-valid",
+                            "leftValue": "={{ $json.valid }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "true",
+                                "singleValue": true
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [
+                -176,
+                560
+            ],
+            "id": "if-url-valid",
+            "name": "URL Valid?"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $json.progress_url }}",
+                "body": {
+                    "contentType": "application/json",
+                    "values": {
+                        "request_id": "={{ $json.request_id }}",
+                        "callback_token": "={{ $json.callback_token }}",
+                        "progress_percent": 25,
+                        "current_step": "scraping_instagram",
+                        "status": "scraping"
+                    }
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                16,
+                560
+            ],
+            "id": "progress-scraping",
+            "name": "Send Progress: Scraping IG"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://www.instagram.com/{{ $json.ig_username }}/?__a=1",
+                "options": {
+                    "headers": {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                    }
+                }
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                208,
+                560
+            ],
+            "id": "scrape-ig-data",
+            "name": "Scrape Instagram Data"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $json.progress_url }}",
+                "body": {
+                    "contentType": "application/json",
+                    "values": {
+                        "request_id": "={{ $json.request_id }}",
+                        "callback_token": "={{ $json.callback_token }}",
+                        "progress_percent": 50,
+                        "current_step": "ai_sentiment_analysis",
+                        "status": "processing"
+                    }
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                400,
+                560
+            ],
+            "id": "progress-ai",
+            "name": "Send Progress: AI Analysis"
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                592,
+                560
+            ],
+            "id": "gemini-model",
+            "name": "Google Gemini Chat Model",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "VR8OntYtmRO1TcRI",
+                    "name": "Google Gemini(PaLM) Api account 5"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Extract IG data and prepare for AI analysis\nconst ig_data = $json;\nconst user = ig_data.user || {};\nconst posts = ig_data.edge_owner_to_timeline_media?.edges || [];\n\nconst captions = posts\n  .slice(0, 10)\n  .map(p => p.node?.edge_media_to_caption?.edges?.[0]?.node?.text || \"\")\n  .filter(c => c.length > 0);\n\nconst prompt = `\nAnalyze Instagram account data and provide:\n1. Sentiment Analysis: Positive/Neutral/Negative breakdown (%) from captions\n2. Engagement Analysis: Average likes, comments, shares per post\n3. Top Topics: Main themes in captions\n4. Audience Insights: Follower demographics if available\n5. Recommendations: 3-5 actionable tips to improve engagement\n\nAccount: @${$('Validate IG URL').first().json.ig_username}\nFollowers: ${user.edge_followed_by?.count || 0}\nFollowing: ${user.edge_follow?.count || 0}\nBio: ${user.biography || \"\"}\n\nRecent captions:\n${captions.join('\\n\\n')}\n\nProvide JSON response:\n{\n  \"sentiment_label\": \"positive|neutral|negative\",\n  \"sentiment_score\": 0-1,\n  \"engagement_score\": 0-100,\n  \"top_topics\": [\"topic1\", \"topic2\"],\n  \"audience_insight\": {\"demographics\": \"...\"},\n  \"recommendations\": [\"rec1\", \"rec2\", \"rec3\"]\n}`;\n\nreturn [{\n  json: {\n    ...JSON.parse($('Progress AI').first().json.body),\n    ai_prompt: prompt,\n    raw_ig_data: ig_data\n  }\n}];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                784,
+                560
+            ],
+            "id": "prepare-ai-prompt",
+            "name": "Prepare AI Analysis Prompt"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $json.progress_url }}",
+                "body": {
+                    "contentType": "application/json",
+                    "values": {
+                        "request_id": "={{ $json.request_id }}",
+                        "callback_token": "={{ $json.callback_token }}",
+                        "progress_percent": 100,
+                        "current_step": "generating_report",
+                        "status": "completed"
+                    }
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                976,
+                560
+            ],
+            "id": "progress-final",
+            "name": "Send Progress: Report Ready"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $json.result_url }}",
+                "body": {
+                    "contentType": "application/json",
+                    "values": {
+                        "request_id": "={{ $json.request_id }}",
+                        "callback_token": "={{ $json.callback_token }}",
+                        "result": {
+                            "summary": "={{ $json.ai_response }}",
+                            "sentiment_label": "={{ $json.sentiment_label }}",
+                            "sentiment_score": "={{ $json.sentiment_score }}",
+                            "sentiment_breakdown": "={{ $json.sentiment_breakdown }}",
+                            "engagement_score": "={{ $json.engagement_score }}",
+                            "engagement_metrics": "={{ $json.engagement_metrics }}",
+                            "top_topics": "={{ $json.top_topics }}",
+                            "audience_insight": "={{ $json.audience_insight }}",
+                            "recommendations": "={{ $json.recommendations }}",
+                            "charts_data": "{{ $json.charts_data }}",
+                            "raw_payload": "={{ $json.raw_ig_data }}"
+                        }
+                    }
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                1168,
+                560
+            ],
+            "id": "send-result",
+            "name": "Send Result to Next.js"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $('Parse Webhook Data').first().json.error_url }}",
+                "body": {
+                    "contentType": "application/json",
+                    "values": {
+                        "request_id": "={{ $('Parse Webhook Data').first().json.request_id }}",
+                        "callback_token": "={{ $('Parse Webhook Data').first().json.callback_token }}",
+                        "error_code": "ENTITLEMENT_INACTIVE",
+                        "error_message": "User entitlement tidak aktif atau belum bayar"
+                    }
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -960,
+                800
+            ],
+            "id": "error-entitlement",
+            "name": "Error: Entitlement Inactive"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $('Parse Webhook Data').first().json.error_url }}",
+                "body": {
+                    "contentType": "application/json",
+                    "values": {
+                        "request_id": "={{ $('Parse Webhook Data').first().json.request_id }}",
+                        "callback_token": "={{ $('Parse Webhook Data').first().json.callback_token }}",
+                        "error_code": "QUOTA_EXCEEDED",
+                        "error_message": "Quota analysis sudah habis untuk paket ini"
+                    }
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -560,
+                800
+            ],
+            "id": "error-quota",
+            "name": "Error: Quota Exceeded"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $('Parse Webhook Data').first().json.error_url }}",
+                "body": {
+                    "contentType": "application/json",
+                    "values": {
+                        "request_id": "={{ $('Parse Webhook Data').first().json.request_id }}",
+                        "callback_token": "={{ $('Parse Webhook Data').first().json.callback_token }}",
+                        "error_code": "INVALID_URL",
+                        "error_message": "{{ $json.error || 'Format URL tidak valid' }}"
+                    }
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -176,
+                800
+            ],
+            "id": "error-url",
+            "name": "Error: Invalid URL"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $('Parse Webhook Data').first().json.error_url }}",
+                "body": {
+                    "contentType": "application/json",
+                    "values": {
+                        "request_id": "={{ $('Parse Webhook Data').first().json.request_id }}",
+                        "callback_token": "={{ $('Parse Webhook Data').first().json.callback_token }}",
+                        "error_code": "SCRAPING_FAILED",
+                        "error_message": "Gagal scrape data Instagram - mungkin akun private atau tidak ditemukan"
+                    }
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                208,
+                800
+            ],
+            "id": "error-scrape",
+            "name": "Error: Scraping Failed"
+        }
+    ],
+    "pinData": {},
+    "connections": {
+        "Webhook Input (from Next.js)": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Webhook Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Webhook Data": {
+            "main": [
+                [
+                    {
+                        "node": "Check Entitlement Status",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check Entitlement Status": {
+            "main": [
+                [
+                    {
+                        "node": "Is Entitlement Active?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Is Entitlement Active?": {
+            "main": [
+                [
+                    {
+                        "node": "Check Quota Available",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Error: Entitlement Inactive",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check Quota Available": {
+            "main": [
+                [
+                    {
+                        "node": "Has Quota?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Has Quota?": {
+            "main": [
+                [
+                    {
+                        "node": "Validate IG URL",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Error: Quota Exceeded",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Validate IG URL": {
+            "main": [
+                [
+                    {
+                        "node": "URL Valid?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "URL Valid?": {
+            "main": [
+                [
+                    {
+                        "node": "Send Progress: Scraping IG",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Error: Invalid URL",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Progress: Scraping IG": {
+            "main": [
+                [
+                    {
+                        "node": "Scrape Instagram Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Scrape Instagram Data": {
+            "main": [
+                [
+                    {
+                        "node": "Send Progress: AI Analysis",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Error: Scraping Failed",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Progress: AI Analysis": {
+            "main": [
+                [
+                    {
+                        "node": "Prepare AI Analysis Prompt",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Prepare AI Analysis Prompt": {
+            "main": [
+                [
+                    {
+                        "node": "Send Progress: Report Ready",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Progress: Report Ready": {
+            "main": [
+                [
+                    {
+                        "node": "Send Result to Next.js",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "tags": [
+        "medsos",
+        "instagram",
+        "analysis"
+    ]
+}

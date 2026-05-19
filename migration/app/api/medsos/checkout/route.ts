@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   const payment = await createMidtransSnap(orderId, packageData.price, user, {
     itemId: `medsos-${packageData.code}`,
     itemName: `Social Media Analysis ${packageData.name}`,
-    finishPath: "/medsos?payment=finish",
+    finishPath: "/medsos/analyze?payment=finish",
     errorPath: "/medsos/packages?payment=error",
     pendingPath: "/medsos/packages?payment=pending",
   });
