@@ -3,12 +3,19 @@ import { getActiveMedsosEntitlement } from "@/lib/medsos/entitlements";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export default async function MedsosLandingPage() {
+export default async function MedsosLandingPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
   }
+
+  const params = await searchParams;
+  const paymentFinish = params.payment === "finish";
 
   let entitlement = null;
 
@@ -16,6 +23,12 @@ export default async function MedsosLandingPage() {
     entitlement = await getActiveMedsosEntitlement(user.id);
   } catch {
     entitlement = null;
+  }
+
+  // Kalau user sudah punya entitlement aktif (dan bukan dari payment finish callback),
+  // langsung arahkan ke analyze tanpa tampil landing page
+  if (entitlement && !paymentFinish) {
+    redirect("/medsos/analyze");
   }
 
   return (
@@ -28,9 +41,20 @@ export default async function MedsosLandingPage() {
             Jalankan scraping, sentiment analysis, engagement analysis, audience insight, dan AI summary melalui workflow
             n8n yang aman dari backend.
           </p>
+          {paymentFinish && !entitlement && (
+            <div
+              className="card"
+              style={{ backgroundColor: "#fef3c7", borderLeft: "4px solid #f59e0b", padding: "12px 16px" }}
+            >
+              <p className="muted" style={{ margin: 0, fontSize: "14px" }}>
+                Pembayaran sedang diproses. Silakan tunggu beberapa saat atau refresh halaman jika entitlement belum
+                muncul.
+              </p>
+            </div>
+          )}
           <div className="actions">
-            <Link className="button" href={entitlement ? "/medsos/analyze" : "/medsos/packages"}>
-              {entitlement ? "Start analysis" : "Choose package"}
+            <Link className="button" href="/medsos/packages">
+              Choose package
             </Link>
             <Link className="button secondary" href="/medsos/history">
               View history
