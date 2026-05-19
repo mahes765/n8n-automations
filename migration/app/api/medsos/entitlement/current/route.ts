@@ -70,10 +70,17 @@ export async function GET(request: NextRequest) {
       expires_at: entitlement.expires_at,
     });
   } catch (error) {
-    console.error("Error checking entitlement:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : "No stack";
+    console.error("[MEDSOS ENTITLEMENT ERROR]", {
+      message: errorMsg,
+      stack: errorStack,
+      timestamp: new Date().toISOString(),
+    });
     return json({
       status: "error",
-      message: error instanceof Error ? error.message : "Unknown error",
+      message: errorMsg || "Unknown error occurred while checking entitlement",
+      debug_info: process.env.NODE_ENV === "development" ? errorStack : undefined,
     }, 500);
   }
 }

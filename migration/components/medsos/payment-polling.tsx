@@ -36,10 +36,11 @@ export default function PaymentPolling() {
         });
       }
     } catch (error) {
-      console.error("Error checking entitlement:", error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error("[PAYMENT POLLING ERROR]", errorMsg, error);
       setPollStatus({
         status: "error",
-        message: error instanceof Error ? error.message : "Network error",
+        message: `Network error: ${errorMsg || "Unknown error"}`,
       });
     }
     return false;
@@ -97,7 +98,7 @@ export default function PaymentPolling() {
           {pollStatus.status === "checking"
             ? "Mohon tunggu sebentar, kami sedang mengaktifkan entitlement Anda..."
             : pollStatus.status === "error"
-              ? `Error: ${pollStatus.message}`
+              ? pollStatus.message
               : "Entitlement berhasil diaktifkan, redirect..."}
         </p>
       </div>
