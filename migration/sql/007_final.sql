@@ -62,11 +62,11 @@ CREATE TABLE public.medsos_packages (
   description text,
   price integer NOT NULL CHECK (price >= 0),
   quota_limit integer NOT NULL CHECK (quota_limit > 0),
-  validity_days integer NOT NULL CHECK (validity_days > 0),
   features jsonb NOT NULL DEFAULT '[]'::jsonb,
   active boolean NOT NULL DEFAULT true,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  purchase_type text NOT NULL DEFAULT 'one_time'::text CHECK (purchase_type = 'one_time'::text),
   CONSTRAINT medsos_packages_pkey PRIMARY KEY (id),
   CONSTRAINT medsos_packages_financial_plan_id_fkey FOREIGN KEY (financial_plan_id) REFERENCES public.subscription_plans(id)
 );
