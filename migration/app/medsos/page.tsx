@@ -1,7 +1,7 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveMedsosEntitlement } from "@/lib/medsos/entitlements";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export default async function MedsosLandingPage() {
   const user = await getCurrentUser();
@@ -10,7 +10,13 @@ export default async function MedsosLandingPage() {
     redirect("/login");
   }
 
-  const entitlement = await getActiveMedsosEntitlement(user.id);
+  let entitlement = null;
+
+  try {
+    entitlement = await getActiveMedsosEntitlement(user.id);
+  } catch {
+    entitlement = null;
+  }
 
   return (
     <div className="stack page-gap">

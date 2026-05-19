@@ -56,6 +56,7 @@ export type MedsosPackage = {
   code: "basic" | "pro" | "premium" | string;
   name: string;
   financial_plan_id: number | null;
+  purchase_type?: "one_time";
   description: string | null;
   price: number;
   quota_limit: number;

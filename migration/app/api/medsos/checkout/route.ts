@@ -26,8 +26,8 @@ export async function POST(request: NextRequest) {
 
   const packageData = await getMedsosPackage(parsed.data.package_id);
 
-  if (!packageData || !packageData.financial_plan_id) {
-    return json({ message: "Package tidak ditemukan atau belum terhubung ke payment plan." }, 404);
+  if (!packageData || !packageData.financial_plan_id || packageData.purchase_type !== "one_time") {
+    return json({ message: "Package tidak ditemukan atau tidak valid untuk pembelian sekali." }, 404);
   }
 
   const orderId = createOrderId(user.id);

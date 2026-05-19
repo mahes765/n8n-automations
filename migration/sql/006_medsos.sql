@@ -1,5 +1,6 @@
 -- Social Media Analysis module.
 -- Additive migration only: reuses existing users, transactions, and payment flow.
+-- Medsos packages are one-time purchases, not recurring subscriptions.
 
 create extension if not exists pgcrypto;
 
@@ -67,6 +68,7 @@ create table if not exists public.medsos_packages (
   code text not null unique,
   name text not null unique,
   financial_plan_id bigint unique references public.subscription_plans(id) on delete set null,
+  purchase_type text not null default 'one_time' check (purchase_type = 'one_time'),
   description text,
   price integer not null check (price >= 0),
   quota_limit integer not null check (quota_limit > 0),
