@@ -26,7 +26,7 @@ export default async function MedsosLandingPage({
   }
 
   // Kalau user sudah punya entitlement aktif (dan bukan dari payment finish callback),
-  // langsung arahkan ke analyze tanpa tampil landing page
+  // langsung arahkan ke form page untuk submit analysis
   if (entitlement && !paymentFinish) {
     redirect("/medsos/analyze");
   }
@@ -53,12 +53,25 @@ export default async function MedsosLandingPage({
             </div>
           )}
           <div className="actions">
-            <Link className="button" href="/medsos/packages">
-              Choose package
-            </Link>
-            <Link className="button secondary" href="/medsos/history">
-              View history
-            </Link>
+            {entitlement ? (
+              <>
+                <Link className="button" href="/medsos/analyze">
+                  Start New Analysis
+                </Link>
+                <Link className="button secondary" href="/medsos/history">
+                  View history
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link className="button" href="/medsos/packages">
+                  Choose package
+                </Link>
+                <Link className="button secondary" href="/medsos/history">
+                  View history
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>
