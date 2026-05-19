@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
     .from("subscription_plans")
     .select("*")
     .eq("id", parsed.data.plan_id)
+    .eq("product_type", "financial_subscription")
     .single();
 
   const plan = planData as SubscriptionPlan | null;

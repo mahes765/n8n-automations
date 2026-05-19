@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { appUrl, requireEnv } from "@/lib/env";
+import { activateMedsosEntitlement, markMedsosPending } from "@/lib/medsos/entitlements";
 import { activateSubscription, markPending } from "@/lib/subscriptions";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { SubscriptionPlan, Transaction, User } from "@/lib/types";
@@ -50,7 +51,18 @@ export function mapMidtransStatus(status: string): Transaction["status"] {
   return "pending";
 }
 
-export async function createMidtransSnap(orderId: string, amount: number, user: User) {
+export async function createMidtransSnap(
+  orderId: string,
+  amount: number,
+  user: User,
+  options?: {
+    itemId?: string;
+    itemName?: string;
+    finishPath?: string;
+    errorPath?: string;
+    pendingPath?: string;
+  },
+) {
   const serverKey = requireEnv("MIDTRANS_SERVER_KEY");
   const production = process.env.MIDTRANS_IS_PRODUCTION === "true";
   const baseUrl = production ? "https://app.midtrans.com" : "https://app.sandbox.midtrans.com";
@@ -76,16 +88,16 @@ export async function createMidtransSnap(orderId: string, amount: number, user: 
       },
       item_details: [
         {
-          id: "subscription",
+          id: options?.itemId || "subscription",
           price: amount,
           quantity: 1,
-          name: "Subscription Plan",
+          name: options?.itemName || "Subscription Plan",
         },
       ],
       callbacks: {
-        finish: appUrl("/plans?payment=finish"),
-        error: appUrl("/plans?payment=error"),
-        pending: appUrl("/plans?payment=pending"),
+        finish: appUrl(options?.finishPath || "/plans?payment=finish"),
+        error: appUrl(options?.errorPath || "/plans?payment=error"),
+        pending: appUrl(options?.pendingPath || "/plans?payment=pending"),
       },
     }),
   });
@@ -149,6 +161,12 @@ export async function handleMidtransWebhook(payload: MidtransWebhookPayload, sig
   const updatedTransaction = updatedData as Transaction;
 
   if (status === "paid") {
+    const entitlement = await activateMedsosEntitlement(updatedTransaction, settlementTime);
+
+    if (entitlement) {
+      return { transaction: updatedTransaction, already_processed: false, medsos_entitlement: entitlement };
+    }
+
     const { data: planData, error: planError } = await supabaseAdmin
       .from("subscription_plans")
       .select("*")
@@ -163,10 +181,12 @@ export async function handleMidtransWebhook(payload: MidtransWebhookPayload, sig
   }
 
   if (status === "expired") {
+    await markMedsosPending(updatedTransaction, "expired");
     await markPending(updatedTransaction, "expired");
   }
 
   if (status === "failed") {
+    await markMedsosPending(updatedTransaction, "cancelled");
     await markPending(updatedTransaction, "inactive");
   }
 

@@ -27,6 +27,7 @@ export default async function PlansPage() {
   const { data } = await supabaseAdmin
     .from("subscription_plans")
     .select("*")
+    .eq("product_type", "financial_subscription")
     .order("duration_days", { ascending: true });
 
   const plans = (data || []) as SubscriptionPlan[];

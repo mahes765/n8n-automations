@@ -30,7 +30,7 @@ export default function LoginForm() {
       return;
     }
 
-    router.push(data.redirect_url || "/plans");
+    router.push(data.redirect_url || "/dashboard");
     router.refresh();
   }
 
@@ -38,7 +38,7 @@ export default function LoginForm() {
     <form className="panel stack" onSubmit={submit}>
       <div>
         <h1>Login</h1>
-        <p className="muted">Masuk untuk mengelola paket subscription dan koneksi Telegram.</p>
+        <p className="muted">Masuk untuk memilih layanan financial atau social media analysis.</p>
       </div>
       <div className="field">
         <label htmlFor="email">Email</label>

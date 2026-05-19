@@ -5,6 +5,7 @@ export async function GET() {
   const { data, error } = await supabaseAdmin
     .from("subscription_plans")
     .select("*")
+    .eq("product_type", "financial_subscription")
     .order("duration_days", { ascending: true });
 
   if (error) {

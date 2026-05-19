@@ -17,12 +17,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <main className="shell">
           <nav className="nav">
-            <Link className="brand" href="/plans">
-              Subscription Bot
+            <Link className="brand" href="/dashboard">
+              Automation Hub
             </Link>
             <div className="nav-links">
               {user ? (
                 <>
+                  <Link className="nav-link" href="/dashboard">
+                    Dashboard
+                  </Link>
+                  <Link className="nav-link" href="/plans">
+                    Financial
+                  </Link>
+                  <Link className="nav-link" href="/medsos">
+                    Medsos
+                  </Link>
                   <span className="muted">{user.email}</span>
                   <LogoutButton />
                 </>

@@ -1,0 +1,772 @@
+{
+  "name": "WF_Social_Media_Analyst",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Kamu adalah Social Media Analyst yang ahli membaca pola konten viral. \n\nKamu akan menerima:\n1. PESAN USER — berisi link Instagram dan keinginan mereka\n2. CAPTION REFERENSI — hasil scraping dari link yang dikirim user\n\nTugasmu: Buat ide konten berdasarkan KEINGINAN USER dengan MENGADOPSI pola, hook, struktur kalimat, dan gaya bahasa dari caption referensi. BUKAN meniru topiknya, tapi MENIRU CARANYA bercerita.\n\nATURAN KETAT (WAJIB DIPATUHI):\n1. DILARANG menggunakan kalimat pembuka atau penutup. Langsung mulai dari nomor 1.\n2. Total keseluruhan teks MAKSIMAL 250 kata.\n3. Ide konten WAJIB membahas topik dari keinginan user, BUKAN mengulang isi referensi.\n4. Kalau caption referensi lebih dari 1, gabungkan polanya — ambil yang terbaik dari masing-masing.\n5. Gunakan format HTML di bawah ini PERSIS, JANGAN gunakan markdown (* atau #):\n\n<b>1. [Judul Ide Konten]</b>\n👉 <b>Visual:</b> [Adegan/desain langsung, maks 10 kata]\n👉 <b>Hook:</b> [Kalimat pancingan mematikan, maks 10 kata]\n👉 <b>Caption:</b> [Inti pesan & Call to Action, maks 20 kata]\n\n<b>2. [Judul Ide Konten]</b>\n(dan seterusnya sampai 3 ide)\n\n<i>🎯 <b>Kesimpulan Eksekusi:</b></i>\n[2 kalimat taktis: bagaimana menerapkan pola referensi ke topik user]\n\n=================\nPESAN USER (berisi link + keinginan):\n{{ $('Get user message').item.json.message.text }}\n\nCAPTION REFERENSI (tiru polanya, BUKAN topiknya):\n{{ $json.text }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1728,
+        -176
+      ],
+      "id": "3aa02947-fd8b-4397-a563-ee0cf480cf71",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1728,
+        32
+      ],
+      "id": "67ba9349-4239-4e63-8df0-8d77da3b19da",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "NJNBNKbpgGzq8S00",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $('Get user message').first().json.message;\nconst text = msg?.text || \"\";\n\nconst links = text.match(/https?:\\/\\/(www\\.)?instagram\\.com\\/[^\\s]+/gi) || [];\n\nif (links.length === 0) {\n  return [{ json: { has_link: false, error_msg: \"Format link tidak valid atau kosong\" } }];\n}\n\nreturn links.map(link => ({\n  json: { has_link: true, ig_url: link, timestamp: new Date() }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        -32
+      ],
+      "id": "1b828a63-56df-4070-94ee-c116f39396ac",
+      "name": "Validation link IG"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "907c13e5-7e44-4db0-a29c-e24cba688c15",
+              "leftValue": "={{ $json.has_link }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        800,
+        -32
+      ],
+      "id": "41902a4e-762b-4d7b-ba04-458ac92516bd",
+      "name": "Cek link IG"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Get user message').item.json.message.chat.id }}",
+        "text": "silahkan menyertakan link yang benar agar workflow dapat berjalan",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1008,
+        96
+      ],
+      "id": "7736c754-c2ae-44de-a26b-93c94c69a3ff",
+      "name": "No link IG",
+      "webhookId": "621d2f31-a509-415b-9f6a-f10923ddd097",
+      "credentials": {
+        "telegramApi": {
+          "id": "2bciSlFtkrATiogQ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4114a690-d971-40cc-91c9-3366b77f09b5",
+              "leftValue": "={{ $json.caption }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1248,
+        -80
+      ],
+      "id": "0f467fbd-c543-4f58-908e-1a94fb9821cc",
+      "name": "Process link IG"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Get user message').item.json.message.from.id }}",
+        "text": "Link gagal diproses, coba lagi...",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1472,
+        16
+      ],
+      "id": "612638cc-b7ff-4620-97c2-e4243887a6d2",
+      "name": "Failed check link",
+      "webhookId": "7a937b31-bea4-499e-b7b3-aa11617c7989",
+      "credentials": {
+        "telegramApi": {
+          "id": "2bciSlFtkrATiogQ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "body.edge_media_to_caption.edges[0].node.text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        -176
+      ],
+      "id": "f66deae1-a70c-4564-b4e6-7a77f38592af",
+      "name": "Data merging"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Get user message').item.json.message.from.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2080,
+        -176
+      ],
+      "id": "6de9d566-934a-4238-abc0-2b0f3bc0cf7d",
+      "name": "Output workflow",
+      "webhookId": "5d3ad0ba-aec2-4e7e-9fc6-ff6380d5947f",
+      "credentials": {
+        "telegramApi": {
+          "id": "2bciSlFtkrATiogQ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b3cea264-42ee-40ac-bcf4-8ca4d76dd550",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "daftar",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -96,
+        -224
+      ],
+      "id": "e21e7e54-8395-4305-b5dc-43056e1ec3b4",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "353f608b-3962-80fd-bbc9-fab3fd4a0a3c",
+          "mode": "list",
+          "cachedResultName": "Subscriber N8N",
+          "cachedResultUrl": "https://app.notion.com/p/353f608b396280fdbbc9fab3fd4a0a3c"
+        },
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "email|rich_text",
+              "condition": "equals",
+              "richTextValue": "={{ $json.message.text.split(' ')[1] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        -400
+      ],
+      "id": "22695426-9eb9-41a7-914c-c9ee9bbce924",
+      "name": "Cek user notion",
+      "alwaysOutputData": true,
+      "credentials": {
+        "notionApi": {
+          "id": "1yiVmPQBS1Z84jSo",
+          "name": "Notion account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e766ce17-188b-4468-bf8f-9b2e5261fb98",
+              "leftValue": "={{ $json.property_is_active }}",
+              "rightValue": "active",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "1aeeefde-00ea-4d5a-a417-8027b2aa689b",
+              "leftValue": "={{ $json.property_expired_at.start }}",
+              "rightValue": "={{ $now.toISO() }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        400,
+        -400
+      ],
+      "id": "45e52f73-f084-4672-84d0-3fd1f5d29eca",
+      "name": "Cek status user"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Get user message').item.json.message.chat.id }}",
+        "text": "Akses aktif, selamat datang",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        864,
+        -512
+      ],
+      "id": "417c0f9e-aea6-4cd2-bdd9-972cbfde2927",
+      "name": "Send a text message",
+      "webhookId": "1593f122-0d63-4009-814d-c0e50c2932b0",
+      "credentials": {
+        "telegramApi": {
+          "id": "2bciSlFtkrATiogQ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Get user message').item.json.message.chat.id }}",
+        "text": "Langganan kamu tidak ditemukan atau sudah habis.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        -304
+      ],
+      "id": "ab53e252-5a13-48d4-9da5-dbcf98414f5e",
+      "name": "Send a text message1",
+      "webhookId": "1593f122-0d63-4009-814d-c0e50c2932b0",
+      "credentials": {
+        "telegramApi": {
+          "id": "2bciSlFtkrATiogQ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "telegram_id|number",
+              "numberValue": "={{ $('If').item.json.message.from.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        -512
+      ],
+      "id": "c4191b1e-c96d-4cfb-a6ed-a7735fbff81d",
+      "name": "Update telegram ID",
+      "credentials": {
+        "notionApi": {
+          "id": "1yiVmPQBS1Z84jSo",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        -224
+      ],
+      "id": "388f062f-f75d-4f27-9df8-6aff6b451149",
+      "name": "Get user message",
+      "webhookId": "b00565c2-9fa9-460c-b8d8-65f8eac2008e",
+      "credentials": {
+        "telegramApi": {
+          "id": "2bciSlFtkrATiogQ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "shu8hvrXbJbY3Eb9W",
+          "mode": "list",
+          "cachedResultName": "Instagram Scraper (apify/instagram-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/shu8hvrXbJbY3Eb9W/input"
+        },
+        "customBody": "={\n  \"directUrls\": [\"{{ $json.ig_url }}\"],\n  \"resultsType\": \"posts\",\n  \"resultsLimit\": 20\n}",
+        "timeout": 120,
+        "authentication": "apifyOAuth2Api"
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        -144
+      ],
+      "id": "721a1f7e-7235-41c9-bc99-b7bc5fc4dc95",
+      "name": "Get IG Scraper",
+      "credentials": {
+        "apifyOAuth2Api": {
+          "id": "t8IDiZ3D4r1hffbH",
+          "name": "Apify OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "353f608b-3962-80fd-bbc9-fab3fd4a0a3c",
+          "mode": "list",
+          "cachedResultName": "Subscriber N8N",
+          "cachedResultUrl": "https://www.notion.so/353f608b396280fdbbc9fab3fd4a0a3c"
+        },
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "key": "telegram_id|number",
+              "condition": "equals",
+              "numberValue": "={{ $json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        -32
+      ],
+      "id": "46a73b6a-eaf0-4f9d-9c5f-de636a0d4048",
+      "name": "Get many database pages",
+      "alwaysOutputData": true,
+      "credentials": {
+        "notionApi": {
+          "id": "1yiVmPQBS1Z84jSo",
+          "name": "Notion account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "height": 128,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        -960
+      ],
+      "id": "7ecea2b4-1df8-42a4-96b1-7c8085fa9845",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "93d42bb2-706d-4611-92c7-3b9d13c4e1ad",
+              "leftValue": "={{ $json.property_is_active }}",
+              "rightValue": "active",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        384,
+        -32
+      ],
+      "id": "0b40efc9-c606-45ce-9654-2028e22e9382",
+      "name": "Cek akses user"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Get user message').item.json.message.from.id }}",
+        "text": "⚠️ Langganan kamu sudah habis atau belum aktif.        Silakan perpanjang di:    http://localhost/simulasiN8N/index.html",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        192
+      ],
+      "id": "cf73c5e6-f408-4c14-96c9-2e07fc6ad04d",
+      "name": "Send a text message2",
+      "webhookId": "7be23baf-8329-4031-ad60-32e3def86ec2",
+      "credentials": {
+        "telegramApi": {
+          "id": "2bciSlFtkrATiogQ",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Output workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validation link IG": {
+      "main": [
+        [
+          {
+            "node": "Cek link IG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cek link IG": {
+      "main": [
+        [
+          {
+            "node": "Get IG Scraper",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No link IG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process link IG": {
+      "main": [
+        [
+          {
+            "node": "Data merging",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Failed check link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data merging": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Cek user notion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get many database pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cek user notion": {
+      "main": [
+        [
+          {
+            "node": "Cek status user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cek status user": {
+      "main": [
+        [
+          {
+            "node": "Update telegram ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update telegram ID": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get user message": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get IG Scraper": {
+      "main": [
+        [
+          {
+            "node": "Process link IG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many database pages": {
+      "main": [
+        [
+          {
+            "node": "Cek akses user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cek akses user": {
+      "main": [
+        [
+          {
+            "node": "Validation link IG",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0997b121-9f9d-45ad-a820-15cf436058a7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9b8e9478de3842f2073387e4d554daaee27841cb8ab7f997bdbf6e3da49496ea"
+  },
+  "id": "xUHYfnRCwHUIHVYO",
+  "tags": []
+}

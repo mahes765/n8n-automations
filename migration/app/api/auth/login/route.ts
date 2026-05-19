@@ -30,5 +30,5 @@ export async function POST(request: Request) {
 
   await setSession(user.id);
 
-  return NextResponse.json({ redirect_url: "/plans" });
+  return NextResponse.json({ redirect_url: "/dashboard" });
 }
