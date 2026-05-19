@@ -1,12 +1,25 @@
 "use client";
 
-import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FormEvent, useState } from "react";
 
 export default function AnalysisForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [profileUrls, setProfileUrls] = useState([""]);
+
+  function updateProfileUrl(index: number, value: string) {
+    setProfileUrls((current) => current.map((item, itemIndex) => (itemIndex === index ? value : item)));
+  }
+
+  function addProfileUrl() {
+    setProfileUrls((current) => [...current, ""]);
+  }
+
+  function removeProfileUrl(index: number) {
+    setProfileUrls((current) => (current.length === 1 ? current : current.filter((_, itemIndex) => itemIndex !== index)));
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -14,12 +27,20 @@ export default function AnalysisForm() {
     setMessage("");
 
     const form = new FormData(event.currentTarget);
+    const normalizedProfileUrls = profileUrls.map((profileUrl) => profileUrl.trim());
+
+    if (normalizedProfileUrls.some((profileUrl) => !profileUrl)) {
+      setLoading(false);
+      setMessage("Semua profile URL yang ditambahkan harus diisi.");
+      return;
+    }
+
     const response = await fetch("/api/medsos/analysis", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         platform: form.get("platform"),
-        profile_url: form.get("profile_url"),
+        profile_urls: normalizedProfileUrls,
         notes: form.get("notes"),
       }),
     });
@@ -46,14 +67,32 @@ export default function AnalysisForm() {
         </select>
       </div>
       <div className="field">
-        <label htmlFor="profile_url">Profile URL</label>
-        <input
-          id="profile_url"
-          name="profile_url"
-          type="url"
-          placeholder="https://instagram.com/example"
-          required
-        />
+        <div className="row-between" style={{ alignItems: "center" }}>
+          <label>Profile URLs</label>
+          <button type="button" className="button secondary" onClick={addProfileUrl}>
+            + Tambah URL
+          </button>
+        </div>
+        <div className="stack" style={{ gap: 12 }}>
+          {profileUrls.map((profileUrl, index) => (
+            <div key={`${index}`} className="row-between" style={{ gap: 12, alignItems: "center" }}>
+              <input
+                id={`profile_url_${index}`}
+                name={`profile_url_${index}`}
+                type="url"
+                placeholder="https://instagram.com/example"
+                value={profileUrl}
+                onChange={(event) => updateProfileUrl(index, event.target.value)}
+                required
+              />
+              {profileUrls.length > 1 ? (
+                <button type="button" className="button secondary" onClick={() => removeProfileUrl(index)}>
+                  Hapus
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </div>
       </div>
       <div className="field">
         <label htmlFor="notes">Additional Notes</label>

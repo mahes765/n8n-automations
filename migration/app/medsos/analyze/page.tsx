@@ -1,8 +1,8 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
 import AnalysisForm from "@/components/medsos/analysis-form";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveMedsosEntitlement } from "@/lib/medsos/entitlements";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export default async function MedsosAnalyzePage() {
   const user = await getCurrentUser();
@@ -21,8 +21,8 @@ export default async function MedsosAnalyzePage() {
     <div className="stack page-gap">
       <section className="page-heading">
         <span className="eyebrow">New Analysis</span>
-        <h1>Submit Social Media Profile</h1>
-        <p className="muted">Frontend mengirim ke backend, lalu backend meneruskan request ke n8n.</p>
+        <h1>Submit Social Media Profiles</h1>
+        <p className="muted">Tambahkan satu atau lebih profile URL, lalu frontend meneruskan request ke backend dan n8n.</p>
       </section>
 
       <section className="two-column">
