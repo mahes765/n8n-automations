@@ -32,7 +32,7 @@
     },
     {
       "parameters": {
-        "url": "=https://n8n-automations-liard.vercel.app//api/medsos/entitlement/{{ $json.entitlement_id }}",
+        "url": "=https://n8n-automations-liard.vercel.app/api/n8n/medsos/entitlement-check?entitlement_id={{ $json.entitlement_id }}&token={{ $env.N8N_SHARED_SECRET }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -79,7 +79,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Check quota available\nconst quota_used = $json.quota_used || 0;\nconst quota_total = $json.quota_total || 0;\nconst quota_available = quota_used < quota_total;\n\nreturn [{\n  json: {\n    ...JSON.parse($('Parse Webhook Data').first().json.json),\n    entitlement: $json,\n    quota_available: quota_available,\n    quota_remaining: quota_total - quota_used\n  }\n}];"
+        "jsCode": "// Check quota available\nconst entitlement = $json;\nconst quota_used = entitlement.quota_used || 0;\nconst quota_total = entitlement.quota_total || 0;\nconst quota_available = quota_used < quota_total;\n\nreturn [{\n  json: {\n    ...JSON.parse($('Parse Webhook Data').first().json),\n    entitlement: entitlement,\n    quota_available: quota_available,\n    quota_remaining: quota_total - quota_used\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -126,7 +126,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Validate Instagram URL format\nconst profile_url = $json.profile_url || \"\";\nconst ig_regex = /https:\\/\\/(www\\.)?instagram\\.com\\/([a-zA-Z0-9_\\.]+)\\/?/;\nconst match = profile_url.match(ig_regex);\n\nif (!match || !match[2]) {\n  return [{\n    json: { \n      valid: false, \n      error: \"Format Instagram URL tidak valid. Gunakan: https://instagram.com/username\"\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...JSON.parse($('Check Quota Available').first().json.json),\n    valid: true,\n    ig_username: match[2],\n    ig_profile_url: `https://instagram.com/${match[2]}`\n  }\n}];"
+        "jsCode": "// Validate Instagram URL format\nconst profile_url = $json.profile_url || \"\";\nconst ig_regex = /https:\\/\\/(www\\.)?instagram\\.com\\/([a-zA-Z0-9_\\.]+)\\/?/;\nconst match = profile_url.match(ig_regex);\n\nif (!match || !match[2]) {\n  return [{\n    json: { \n      valid: false, \n      error: \"Format Instagram URL tidak valid. Gunakan: https://instagram.com/username\"\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...Object.assign({}, $json),\n    valid: true,\n    ig_username: match[2],\n    ig_profile_url: `https://instagram.com/${match[2]}`\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -188,13 +188,9 @@
     },
     {
       "parameters": {
-        "method": "GET",
+        "method": "POST",
         "url": "https://www.instagram.com/{{ $json.ig_username }}/?__a=1",
-        "options": {
-          "headers": {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-          }
-        }
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
@@ -222,7 +218,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract IG data and prepare for AI analysis\nconst prev_data = $json;\nconst ig_data = prev_data.raw_ig_data || prev_data;\nconst user = ig_data.user || {};\nconst posts = ig_data.edge_owner_to_timeline_media?.edges || [];\n\nconst captions = posts\n  .slice(0, 10)\n  .map(p => p.node?.edge_media_to_caption?.edges?.[0]?.node?.text || \"\")\n  .filter(c => c.length > 0);\n\nconst ig_username = prev_data.ig_username || \"unknown\";\n\nconst prompt = `\nAnalyze Instagram account data and provide:\n1. Sentiment Analysis: Positive/Neutral/Negative breakdown (%) from captions\n2. Engagement Analysis: Average likes, comments, shares per post\n3. Top Topics: Main themes in captions\n4. Audience Insights: Follower demographics if available\n5. Recommendations: 3-5 actionable tips to improve engagement\n\nAccount: @${ig_username}\nFollowers: ${user.edge_followed_by?.count || 0}\nFollowing: ${user.edge_follow?.count || 0}\nBio: ${user.biography || \"\"}\n\nRecent captions:\n${captions.join('\\\\n\\\\n')}\n\nProvide JSON response:\n{\n  \"sentiment_label\": \"positive|neutral|negative\",\n  \"sentiment_score\": 0-1,\n  \"engagement_score\": 0-100,\n  \"top_topics\": [\"topic1\", \"topic2\"],\n  \"audience_insight\": {\"demographics\": \"...\"},\n  \"recommendations\": [\"rec1\", \"rec2\", \"rec3\"]\n}`;\n\nreturn [{\n  json: {\n    ...prev_data,\n    ai_prompt: prompt,\n    raw_ig_data: ig_data\n  }\n}];"
+        "jsCode": "// Extract IG data and prepare for AI analysis\nconst ig_data = $json.raw_ig_data || $json;\nconst user = ig_data.user || {};\nconst posts = ig_data.edge_owner_to_timeline_media?.edges || [];\nconst ig_username = $json.ig_username || \"unknown\";\n\nconst captions = posts\n  .slice(0, 10)\n  .map(p => p.node?.edge_media_to_caption?.edges?.[0]?.node?.text || \"\")\n  .filter(c => c.length > 0);\n\nconst prompt = `\nAnalyze Instagram account data and provide:\n1. Sentiment Analysis: Positive/Neutral/Negative breakdown (%) from captions\n2. Engagement Analysis: Average likes, comments, shares per post\n3. Top Topics: Main themes in captions\n4. Audience Insights: Follower demographics if available\n5. Recommendations: 3-5 actionable tips to improve engagement\n\nAccount: @${ig_username}\nFollowers: ${user.edge_followed_by?.count || 0}\nFollowing: ${user.edge_follow?.count || 0}\nBio: ${user.biography || \"\"}\n\nRecent captions:\n${captions.join('\\n\\n')}\n\nProvide JSON response:\n{\n  \"sentiment_label\": \"positive|neutral|negative\",\n  \"sentiment_score\": 0-1,\n  \"engagement_score\": 0-100,\n  \"top_topics\": [\"topic1\", \"topic2\"],\n  \"audience_insight\": {\"demographics\": \"...\"},\n  \"recommendations\": [\"rec1\", \"rec2\", \"rec3\"]\n}`;\n\nreturn [{\n  json: {\n    ...Object.assign({}, $json),\n    ai_prompt: prompt,\n    raw_ig_data: ig_data\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -254,7 +250,7 @@
         "url": "={{ $json.result_url }}",
         "sendBody": true,
         "contentType": "application/json",
-        "body": "{\n  \"request_id\": \"{{ $json.request_id }}\",\n  \"status\": \"completed\",\n  \"analysis\": {{ $json.text || \"{}\" }},\n  \"sentiment_label\": \"positive\",\n  \"sentiment_score\": 0.75,\n  \"engagement_score\": 85,\n  \"completed_at\": \"{{ $json.timestamp }}\"\n}",
+        "body": "{\n  \"request_id\": \"{{ $json.request_id }}\",\n  \"status\": \"completed\",\n  \"analysis\": {{ $json.text || $json.message || \"{}\" }},\n  \"completed_at\": \"{{ now.toISOString() }}\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -330,7 +326,8 @@
       "parameters": {
         "model": "gemini-1.5-pro",
         "options": {
-          "temperature": 0.7
+          "temperature": 0.7,
+          "maxTokens": 2000
         },
         "messages": {
           "values": [
@@ -487,13 +484,6 @@
             "type": "main",
             "index": 0
           }
-        ],
-        [
-          {
-            "node": "Error: Scraping Failed",
-            "type": "main",
-            "index": 0
-          }
         ]
       ]
     },
@@ -546,7 +536,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "1dacb0bd-bf9e-4b60-8af3-7ad72f42bba2",
+  "versionId": "d57519c0-80dc-4fed-8df2-ee7373f4e15c",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "55610ab40ec438f7d6aa8007bfeae732bdf2a7ca0d8e42d7155a97bc98c9b2e4"
