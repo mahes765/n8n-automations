@@ -1,7 +1,8 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getMedsosResult } from "@/lib/medsos/requests";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import ExportPdfButton from "./export-pdf-button";
 
 function asPercent(value: number | null | undefined): string {
   if (value === null || value === undefined) {
@@ -61,9 +62,7 @@ export default async function MedsosResultPage({ params }: { params: Promise<{ i
             {request.profile_url} · {result.generated_at ? new Date(result.generated_at).toLocaleString("id-ID") : "-"}
           </p>
         </div>
-        <button type="button" className="secondary">
-          Export PDF
-        </button>
+        <ExportPdfButton />
       </section>
 
       <section className="metric-grid">

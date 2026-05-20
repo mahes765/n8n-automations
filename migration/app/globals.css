@@ -113,6 +113,30 @@ button:disabled {
   opacity: 0.65;
 }
 
+@media print {
+  .nav,
+  .actions,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  .shell {
+    width: 100%;
+    padding: 0;
+  }
+
+  .card,
+  .panel,
+  .hero-panel {
+    border-color: #d1d5db;
+    box-shadow: none;
+  }
+}
+
 .panel,
 .card {
   border: 1px solid var(--line);
