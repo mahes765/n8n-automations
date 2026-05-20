@@ -38,7 +38,7 @@ export default async function MedsosPackagesPage() {
             <div>
               <div className="price">{rupiah(packageData.price)}</div>
               <p className="muted">
-                {packageData.quota_limit} analysis · valid {packageData.validity_days} hari
+                {packageData.quota_limit} analysis · one-time purchase
               </p>
             </div>
             <ul className="feature-list">

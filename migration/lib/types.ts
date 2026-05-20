@@ -60,7 +60,6 @@ export type MedsosPackage = {
   description: string | null;
   price: number;
   quota_limit: number;
-  validity_days: number;
   features: string[];
   active: boolean;
   created_at: string;

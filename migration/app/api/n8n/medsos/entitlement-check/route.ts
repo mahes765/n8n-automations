@@ -51,8 +51,7 @@ export async function GET(request: NextRequest) {
           id,
           name,
           code,
-          price,
-          validity_days
+          price
         )
       `
       )
