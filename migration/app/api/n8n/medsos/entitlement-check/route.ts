@@ -9,18 +9,39 @@ import { NextRequest } from "next/server";
  * Tidak memerlukan authenticated user session
  * 
  * Query params:
- * - entitlement_id: ID dari medsos_entitlements
+ * - entitlement_id: ID dari medsos_entitlements (preferred)
+ * - request_id: ID dari medsos_requests (fallback - will lookup entitlement_id)
  * - token: Optional validation token
  */
 export async function GET(request: NextRequest) {
   try {
-    const entitlementId = request.nextUrl.searchParams.get("entitlement_id");
+    let entitlementId = request.nextUrl.searchParams.get("entitlement_id");
+    const requestId = request.nextUrl.searchParams.get("request_id");
     const validationToken = request.nextUrl.searchParams.get("token");
+
+    // If only request_id provided, lookup entitlement_id from medsos_requests
+    if (!entitlementId && requestId) {
+      const { data: requestData, error: requestError } = await supabaseAdmin
+        .from("medsos_requests")
+        .select("entitlement_id")
+        .eq("id", parseInt(requestId))
+        .maybeSingle();
+
+      if (requestError || !requestData) {
+        return json({
+          status: "error",
+          message: "Request not found",
+          request_id: requestId,
+        }, 404);
+      }
+
+      entitlementId = requestData.entitlement_id?.toString();
+    }
 
     if (!entitlementId) {
       return json({
         status: "error",
-        message: "entitlement_id query parameter required",
+        message: "entitlement_id or request_id query parameter required",
       }, 400);
     }
 

@@ -1,13 +1,13 @@
 import { appUrl } from "@/lib/env";
+import { chargeMedsosQuota, getActiveMedsosEntitlement } from "@/lib/medsos/entitlements";
 import { supabaseAdmin } from "@/lib/supabase";
 import type {
-  MedsosAnalysisResult,
-  MedsosPlatform,
-  MedsosRequest,
-  MedsosRequestStatus,
-  User,
+    MedsosAnalysisResult,
+    MedsosPlatform,
+    MedsosRequest,
+    MedsosRequestStatus,
+    User,
 } from "@/lib/types";
-import { chargeMedsosQuota, getActiveMedsosEntitlement } from "@/lib/medsos/entitlements";
 
 const platformHosts: Record<MedsosPlatform, string[]> = {
   instagram: ["instagram.com", "www.instagram.com"],
@@ -93,6 +93,7 @@ export async function dispatchMedsosRequestToN8n(request: MedsosRequest): Promis
     },
     body: JSON.stringify({
       request_id: request.id,
+      entitlement_id: request.entitlement_id,
       callback_token: request.callback_token,
       platform: request.platform,
       profile_url: request.profile_url,
