@@ -14,9 +14,12 @@ export function getBearerToken(request: NextRequest): string | null {
   return null;
 }
 
-export function isN8nRequest(request: NextRequest): boolean {
+export function isN8nRequest(request: NextRequest, body?: any): boolean {
   const sharedSecret = process.env.N8N_SHARED_SECRET;
-  const providedSecret = getBearerToken(request) || request.headers.get("x-n8n-secret");
+  const providedSecret = 
+    getBearerToken(request) || 
+    request.headers.get("x-n8n-secret") ||
+    body?.n8n_secret;  // Accept secret from body as fallback
 
   return Boolean(sharedSecret && providedSecret && sharedSecret === providedSecret);
 }

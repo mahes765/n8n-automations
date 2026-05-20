@@ -1,7 +1,7 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
 import { isN8nRequest, json } from "@/lib/http";
 import { saveMedsosResult, verifyMedsosCallback } from "@/lib/medsos/requests";
+import { NextRequest } from "next/server";
+import { z } from "zod";
 
 const schema = z.object({
   request_id: z.coerce.number().int().positive(),
@@ -18,14 +18,31 @@ const schema = z.object({
   charts_data: z.record(z.unknown()).optional(),
   raw_payload: z.record(z.unknown()).optional().nullable(),
   model_version: z.string().optional().nullable(),
+  n8n_secret: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
-  if (!isN8nRequest(request)) {
+  const body = await request.json();
+  
+  // DEBUG: Log auth details
+  const authHeader = request.headers.get("authorization");
+  const secretHeader = request.headers.get("x-n8n-secret");
+  const envSecret = process.env.N8N_SHARED_SECRET;
+  
+  console.log("🔍 Result Auth Debug:", {
+    authHeader: authHeader ? `Bearer ${authHeader.slice(7, 20)}...` : "missing",
+    secretHeader: secretHeader ? `${secretHeader.slice(0, 20)}...` : "missing",
+    bodySecret: body.n8n_secret ? `${body.n8n_secret.slice(0, 20)}...` : "missing",
+    envSecret: envSecret ? `${envSecret.slice(0, 20)}...` : "UNDEFINED ⚠️",
+  });
+
+  if (!isN8nRequest(request, body)) {
+    console.log("❌ Result auth validation failed");
     return json({ message: "Unauthorized." }, 401);
   }
+  
+  console.log("✅ Result auth validation passed");
 
-  const body = await request.json();
   const parsed = schema.safeParse(body);
 
   if (!parsed.success) {

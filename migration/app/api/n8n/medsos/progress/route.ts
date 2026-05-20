@@ -1,7 +1,7 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
 import { isN8nRequest, json } from "@/lib/http";
 import { updateMedsosRequestStatus, verifyMedsosCallback } from "@/lib/medsos/requests";
+import { NextRequest } from "next/server";
+import { z } from "zod";
 
 const schema = z.object({
   request_id: z.coerce.number().int().positive(),
@@ -10,14 +10,32 @@ const schema = z.object({
   progress_percent: z.coerce.number().int().min(0).max(99),
   current_step: z.string().min(1).max(200),
   n8n_execution_id: z.string().optional().nullable(),
+  n8n_secret: z.string().optional(), // Accept but don't require (auth happens first)
 });
 
 export async function POST(request: NextRequest) {
-  if (!isN8nRequest(request)) {
+  // DEBUG: Log auth details
+  const authHeader = request.headers.get("authorization");
+  const secretHeader = request.headers.get("x-n8n-secret");
+  const envSecret = process.env.N8N_SHARED_SECRET;
+  
+  const body = await request.json();
+  
+  console.log("🔍 Auth Debug:", {
+    authHeader: authHeader ? `Bearer ${authHeader.slice(7, 20)}...` : "missing",
+    secretHeader: secretHeader ? `${secretHeader.slice(0, 20)}...` : "missing",
+    bodySecret: body.n8n_secret ? `${body.n8n_secret.slice(0, 20)}...` : "missing",
+    envSecret: envSecret ? `${envSecret.slice(0, 20)}...` : "UNDEFINED ⚠️",
+  });
+
+  if (!isN8nRequest(request, body)) {
+    console.log("❌ Auth validation failed");
     return json({ message: "Unauthorized." }, 401);
   }
+  
+  console.log("✅ Auth validation passed");
 
-  const parsed = schema.safeParse(await request.json());
+  const parsed = schema.safeParse(body);
 
   if (!parsed.success) {
     return json({ message: "Payload progress tidak valid." }, 422);
