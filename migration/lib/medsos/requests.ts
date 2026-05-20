@@ -2,11 +2,11 @@ import { appUrl } from "@/lib/env";
 import { chargeMedsosQuota, getActiveMedsosEntitlement } from "@/lib/medsos/entitlements";
 import { supabaseAdmin } from "@/lib/supabase";
 import type {
-    MedsosAnalysisResult,
-    MedsosPlatform,
-    MedsosRequest,
-    MedsosRequestStatus,
-    User,
+  MedsosAnalysisResult,
+  MedsosPlatform,
+  MedsosRequest,
+  MedsosRequestStatus,
+  User,
 } from "@/lib/types";
 
 const platformHosts: Record<MedsosPlatform, string[]> = {
@@ -41,8 +41,6 @@ export async function createMedsosRequest(
   if (!validatePlatformUrl(input.platform, input.profile_url)) {
     throw new Error("URL profile tidak sesuai dengan platform yang dipilih.");
   }
-
-  await chargeMedsosQuota(entitlement.id);
 
   const { data, error } = await supabaseAdmin
     .from("medsos_requests")
@@ -259,6 +257,17 @@ export async function saveMedsosResult(
   requestId: number,
   values: Partial<MedsosAnalysisResult>,
 ): Promise<void> {
+  // Get request with entitlement_id for quota charging
+  const { data: requestData, error: requestError } = await supabaseAdmin
+    .from("medsos_requests")
+    .select("entitlement_id")
+    .eq("id", requestId)
+    .single();
+
+  if (requestError || !requestData) {
+    throw requestError || new Error(`Request ${requestId} tidak ditemukan`);
+  }
+
   const { error } = await supabaseAdmin.from("medsos_analysis_results").upsert(
     {
       request_id: requestId,
@@ -282,6 +291,9 @@ export async function saveMedsosResult(
   if (error) {
     throw error;
   }
+
+  // CHARGE QUOTA AFTER analysis is complete (not before)
+  await chargeMedsosQuota(requestData.entitlement_id);
 
   await updateMedsosRequestStatus(requestId, {
     status: "completed",
