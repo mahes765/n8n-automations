@@ -408,11 +408,15 @@ export class ApifyInstagramService {
 
             console.log(`[Apify] Scraping Instagram @${username}...`);
 
+            const actorInput = {
+                usernames: [username],
+                resultsLimit: 15,
+            };
+
+            console.log(`[Apify] Payload for ${this.actorId}:`, actorInput);
+
             // Call Apify actor dengan timeout
-            const runPromise = this.client.actor(this.actorId).call({
-                username,
-                resultsLimit: 15, // Ambil 15 posts terbaru
-            });
+            const runPromise = this.client.actor(this.actorId).call(actorInput);
 
             const run = (await Promise.race([
                 runPromise,
@@ -449,6 +453,9 @@ export class ApifyInstagramService {
                 console.warn(
                     `[Apify] Dataset kosong untuk @${username}. Kemungkinan actor tidak mengembalikan item profil atau username tidak dikenali.`
                 );
+                if (this.debugApifyParsing) {
+                    console.log(`[Apify Debug] Empty dataset response for @${username}:`, this.safePreview(dataset));
+                }
                 return {
                     success: false,
                     errorCode: "PROFILE_NOT_FOUND",
