@@ -38,6 +38,90 @@ function asJsonValue(value: unknown, fallback: unknown = null): unknown {
   return parsed === undefined ? fallback : parsed;
 }
 
+function isEmptyObject(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  return Object.keys(value).length === 0;
+}
+
+function isEmptyArray(value: unknown): boolean {
+  return Array.isArray(value) && value.length === 0;
+}
+
+function textToList(value: unknown): string[] {
+  if (typeof value !== "string") {
+    return [];
+  }
+
+  const text = value.trim();
+
+  if (!text) {
+    return [];
+  }
+
+  const baseParts = text.includes("\n") ? text.split("\n") : text.split(",");
+
+  return baseParts
+    .map((item) => item.trim())
+    .map((item) => item.replace(/^(\d+[.)]\s*|[-*]\s*)/, "").trim())
+    .filter(Boolean);
+}
+
+function asSummaryObject(value: unknown): Record<string, unknown> {
+  if (typeof value !== "string") {
+    return {};
+  }
+
+  const summary = value.trim();
+  return summary ? { summary } : {};
+}
+
+function normalizeObjectField(topLevelValue: unknown, rawValue: unknown): Record<string, unknown> {
+  const topObject = asJsonObject(topLevelValue, {});
+
+  if (!isEmptyObject(topObject)) {
+    return topObject;
+  }
+
+  const topSummaryObject = asSummaryObject(topLevelValue);
+
+  if (!isEmptyObject(topSummaryObject)) {
+    return topSummaryObject;
+  }
+
+  const rawObject = asJsonObject(rawValue, {});
+
+  if (!isEmptyObject(rawObject)) {
+    return rawObject;
+  }
+
+  return asSummaryObject(rawValue);
+}
+
+function normalizeArrayField(topLevelValue: unknown, rawValue: unknown): unknown[] {
+  const topArray = asJsonArray(topLevelValue, []);
+
+  if (!isEmptyArray(topArray)) {
+    return topArray;
+  }
+
+  const topTextList = textToList(topLevelValue);
+
+  if (!isEmptyArray(topTextList)) {
+    return topTextList;
+  }
+
+  const rawArray = asJsonArray(rawValue, []);
+
+  if (!isEmptyArray(rawArray)) {
+    return rawArray;
+  }
+
+  return textToList(rawValue);
+}
+
 function normalizeRequestBody(body: unknown): Record<string, unknown> | null {
   const parsed = parseJsonString(body);
 
@@ -100,15 +184,36 @@ export async function POST(request: NextRequest) {
     return json({ message: "Payload result tidak valid." }, 422);
   }
 
+  const rawPayloadObject = asJsonObject(parsed.data.raw_payload, {});
+
+  const sentimentBreakdown = normalizeObjectField(
+    parsed.data.sentiment_breakdown,
+    rawPayloadObject.sentiment_breakdown,
+  );
+  const engagementMetrics = normalizeObjectField(
+    parsed.data.engagement_metrics,
+    rawPayloadObject.engagement_metrics,
+  );
+  const audienceInsight = normalizeObjectField(
+    parsed.data.audience_insight,
+    rawPayloadObject.audience_insight,
+  );
+  const chartsData = normalizeObjectField(
+    parsed.data.charts_data,
+    rawPayloadObject.charts_data,
+  );
+  const topTopics = normalizeArrayField(parsed.data.top_topics, rawPayloadObject.top_topics);
+  const recommendations = normalizeArrayField(parsed.data.recommendations, rawPayloadObject.recommendations);
+
   await verifyMedsosCallback(parsed.data.request_id, parsed.data.callback_token);
   await saveMedsosResult(parsed.data.request_id, {
     ...parsed.data,
-    sentiment_breakdown: asJsonObject(parsed.data.sentiment_breakdown, {}),
-    engagement_metrics: asJsonObject(parsed.data.engagement_metrics, {}),
-    top_topics: asJsonArray(parsed.data.top_topics, []),
-    audience_insight: asJsonObject(parsed.data.audience_insight, {}),
-    recommendations: asJsonArray(parsed.data.recommendations, []),
-    charts_data: asJsonObject(parsed.data.charts_data, {}),
+    sentiment_breakdown: sentimentBreakdown,
+    engagement_metrics: engagementMetrics,
+    top_topics: topTopics,
+    audience_insight: audienceInsight,
+    recommendations,
+    charts_data: chartsData,
     raw_payload: asJsonValue(parsed.data.raw_payload, body),
   });
 
