@@ -126,14 +126,14 @@ export type MedsosAnalysisResult = {
   summary: string | null;
   sentiment_label: string | null;
   sentiment_score: number | null;
-  sentiment_breakdown: Record<string, number>;
+  sentiment_breakdown: Record<string, unknown>;
   engagement_score: number | null;
   engagement_metrics: Record<string, unknown>;
   top_topics: unknown[];
   audience_insight: Record<string, unknown>;
   recommendations: unknown[];
   charts_data: Record<string, unknown>;
-  raw_payload: Record<string, unknown> | null;
+  raw_payload: unknown | null;
   model_version: string | null;
   generated_at: string | null;
   created_at: string;

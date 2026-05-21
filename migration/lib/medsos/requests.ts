@@ -9,6 +9,41 @@ import type {
   User,
 } from "@/lib/types";
 
+function parseJsonString(value: unknown): unknown {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return value;
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+}
+
+function asJsonObject(value: unknown, fallback: Record<string, unknown> = {}): Record<string, unknown> {
+  const parsed = parseJsonString(value);
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    ? (parsed as Record<string, unknown>)
+    : fallback;
+}
+
+function asJsonArray(value: unknown, fallback: unknown[] = []): unknown[] {
+  const parsed = parseJsonString(value);
+  return Array.isArray(parsed) ? parsed : fallback;
+}
+
+function asJsonValue(value: unknown, fallback: unknown = null): unknown {
+  const parsed = parseJsonString(value);
+  return parsed === undefined ? fallback : parsed;
+}
+
 const platformHosts: Record<MedsosPlatform, string[]> = {
   instagram: ["instagram.com", "www.instagram.com"],
   tiktok: ["tiktok.com", "www.tiktok.com"],
@@ -274,14 +309,14 @@ export async function saveMedsosResult(
       summary: values.summary || null,
       sentiment_label: values.sentiment_label || null,
       sentiment_score: values.sentiment_score ?? null,
-      sentiment_breakdown: values.sentiment_breakdown || {},
+      sentiment_breakdown: asJsonObject(values.sentiment_breakdown, {}),
       engagement_score: values.engagement_score ?? null,
-      engagement_metrics: values.engagement_metrics || {},
-      top_topics: values.top_topics || [],
-      audience_insight: values.audience_insight || {},
-      recommendations: values.recommendations || [],
-      charts_data: values.charts_data || {},
-      raw_payload: values.raw_payload || null,
+      engagement_metrics: asJsonObject(values.engagement_metrics, {}),
+      top_topics: asJsonArray(values.top_topics, []),
+      audience_insight: asJsonObject(values.audience_insight, {}),
+      recommendations: asJsonArray(values.recommendations, []),
+      charts_data: asJsonObject(values.charts_data, {}),
+      raw_payload: asJsonValue(values.raw_payload, null),
       model_version: values.model_version || null,
       generated_at: values.generated_at || new Date().toISOString(),
     },
