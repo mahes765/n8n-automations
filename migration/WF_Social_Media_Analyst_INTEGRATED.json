@@ -1,5 +1,5 @@
 {
-  "name": "WF_Social_Media_Analyst",
+  "name": "WF_Social_Media_Analyst_Apify_Integrated",
   "nodes": [
     {
       "parameters": {
@@ -200,7 +200,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://www.instagram.com/{{ $json.ig_username }}/?__a=1",
+        "url": "=https://YOUR_VERCEL_DOMAIN.com/api/medsos/scrape-instagram",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"username\": \"{{ $json.ig_username }}\",\n  \"request_id\": \"{{ $json.request_id }}\",\n  \"n8n_secret\": \"jllIcqyZiL0Od9g5b7Qq7fUtDc4JLdMRz\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -211,6 +214,19 @@
       ],
       "id": "c8c2ba7d-59e6-4644-9aae-8474c91c47a3",
       "name": "Scrape Instagram Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Transform Apify response to Instagram native format for downstream compatibility\nconst response = $json || {};\n\n// Error handling\nif (!response.success || !response.data) {\n  return [{\n    json: {\n      error: response.error || 'Failed to scrape Instagram profile',\n      errorCode: response.errorCode || 'scraping_failed'\n    }\n  }];\n}\n\nconst profile = response.data;\n\n// Transform Apify format to Instagram native format\n// This ensures compatibility with downstream nodes expecting Instagram native structure\nconst transformedData = {\n  success: true,\n  data: {\n    user: {\n      username: profile.username || '',\n      full_name: profile.fullName || '',\n      biography: profile.biography || '',\n      edge_followed_by: {\n        count: profile.followerCount || 0\n      },\n      edge_follow: {\n        count: profile.followingCount || 0\n      },\n      profile_pic_url: profile.profilePicUrl || '',\n      is_verified: profile.isVerified || false,\n      is_business_account: profile.isBusinessAccount || false\n    },\n    edge_owner_to_timeline_media: {\n      edges: (profile.posts || []).map(post => ({\n        node: {\n          id: post.id || '',\n          caption: post.caption || '',\n          timestamp: post.timestamp || new Date().toISOString(),\n          edge_media_to_caption: {\n            edges: post.caption ? [\n              {\n                node: {\n                  text: post.caption\n                }\n              }\n            ] : []\n          },\n          edge_media_preview_like: {\n            count: post.likeCount || 0\n          },\n          edge_media_to_comment: {\n            count: post.commentCount || 0\n          },\n          is_carousel: post.isCarousel || false\n        }\n      }))\n    }\n  }\n};\n\nreturn [{ json: transformedData }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16450,
+        5520
+      ],
+      "id": "transform-instagram-response-001",
+      "name": "Transform Instagram Data"
     },
     {
       "parameters": {
@@ -232,7 +248,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract IG data and prepare for AI analysis\nconst webhookData = $('Parse Webhook Data').first()?.json || {};\nconst scrapedData = $('Scrape Instagram Data').first()?.json || {};\nconst ig_data = scrapedData.data || scrapedData.raw_ig_data || scrapedData;\nconst user = ig_data.user || {};\nconst posts = ig_data.edge_owner_to_timeline_media?.edges || [];\nconst profileUrl = webhookData.profile_url || '';\nconst usernameMatch = profileUrl.match(/instagram\\.com\\/([a-zA-Z0-9_\\.]+)/);\nconst ig_username = usernameMatch?.[1] || webhookData.ig_username || 'unknown';\n\nconst captions = posts\n  .slice(0, 10)\n  .map(p => p.node?.edge_media_to_caption?.edges?.[0]?.node?.text || '')\n  .filter(c => c.length > 0);\n\nconst prompt = `\nAnalyze Instagram account data and provide:\n1. Sentiment Analysis: Positive/Neutral/Negative breakdown (%) from captions\n2. Engagement Analysis: Average likes, comments, shares per post\n3. Top Topics: Main themes in captions\n4. Audience Insights: Follower demographics if available\n5. Recommendations: 3-5 actionable tips to improve engagement\n\nAccount: @${ig_username}\nFollowers: ${user.edge_followed_by?.count || 0}\nFollowing: ${user.edge_follow?.count || 0}\nBio: ${user.biography || ''}\n\nRecent captions:\n${captions.join('\\n\\n')}\n\nProvide JSON response:\n{\n  \"sentiment_label\": \"positive|neutral|negative\",\n  \"sentiment_score\": 0-1,\n  \"engagement_score\": 0-100,\n  \"top_topics\": [\"topic1\", \"topic2\"],\n  \"audience_insight\": {\"demographics\": \"...\"},\n  \"recommendations\": [\"rec1\", \"rec2\", \"rec3\"]\n}`;\n\nreturn [{\n  json: {\n    ...webhookData,\n    ai_prompt: prompt,\n    raw_ig_data: ig_data,\n    ig_username,\n    profile_url: webhookData.profile_url || profileUrl\n  }\n}];"
+        "jsCode": "// Extract IG data and prepare for AI analysis\nconst webhookData = $('Parse Webhook Data').first()?.json || {};\nconst scrapedData = $('Transform Instagram Data').first()?.json || {};\nconst ig_data = scrapedData.data || scrapedData.raw_ig_data || scrapedData;\nconst user = ig_data.user || {};\nconst posts = ig_data.edge_owner_to_timeline_media?.edges || [];\nconst profileUrl = webhookData.profile_url || '';\nconst usernameMatch = profileUrl.match(/instagram\\.com\\/([a-zA-Z0-9_\\.]+)/);\nconst ig_username = usernameMatch?.[1] || webhookData.ig_username || 'unknown';\n\nconst captions = posts\n  .slice(0, 10)\n  .map(p => p.node?.edge_media_to_caption?.edges?.[0]?.node?.text || '')\n  .filter(c => c.length > 0);\n\nconst prompt = `\nAnalyze Instagram account data and provide:\n1. Sentiment Analysis: Positive/Neutral/Negative breakdown (%) from captions\n2. Engagement Analysis: Average likes, comments, shares per post\n3. Top Topics: Main themes in captions\n4. Audience Insights: Follower demographics if available\n5. Recommendations: 3-5 actionable tips to improve engagement\n\nAccount: @${ig_username}\nFollowers: ${user.edge_followed_by?.count || 0}\nFollowing: ${user.edge_follow?.count || 0}\nBio: ${user.biography || ''}\n\nRecent captions:\n${captions.join('\\n\\n')}\n\nProvide JSON response:\n{\n  \"sentiment_label\": \"positive|neutral|negative\",\n  \"sentiment_score\": 0-1,\n  \"engagement_score\": 0-100,\n  \"top_topics\": [\"topic1\", \"topic2\"],\n  \"audience_insight\": {\"demographics\": \"...\"},\n  \"recommendations\": [\"rec1\", \"rec2\", \"rec3\"]\n}`;\n\nreturn [{\n  json: {\n    ...webhookData,\n    ai_prompt: prompt,\n    raw_ig_data: ig_data,\n    ig_username,\n    profile_url: webhookData.profile_url || profileUrl\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -559,6 +575,17 @@
       "main": [
         [
           {
+            "node": "Transform Instagram Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform Instagram Data": {
+      "main": [
+        [
+          {
             "node": "Send Progress: AI Analysis",
             "type": "main",
             "index": 0
@@ -632,5 +659,10 @@
     "instanceId": "55610ab40ec438f7d6aa8007bfeae732bdf2a7ca0d8e42d7155a97bc98c9b2e4"
   },
   "id": "F7Bdfk5DigrNsope",
-  "tags": []
+  "tags": [
+    "instagram",
+    "apify",
+    "social-media",
+    "integration"
+  ]
 }
