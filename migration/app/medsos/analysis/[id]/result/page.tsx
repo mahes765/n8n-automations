@@ -104,6 +104,7 @@ export default async function MedsosResultPage({ params }: { params: Promise<{ i
       <section className="two-column">
         <article className="card stack">
           <span className="eyebrow">Audience Insight</span>
+
           <div className="flex flex-col gap-3">
             {Object.entries(result.audience_insight || {}).length ? (
               Object.entries(result.audience_insight || {}).map(([key, value]) => (
@@ -125,6 +126,20 @@ export default async function MedsosResultPage({ params }: { params: Promise<{ i
               <p>Audience insight belum tersedia.</p>
             )}
           </div>
+        </article>
+
+        <article className="card stack">
+          <span className="eyebrow">Recommendations</span>
+
+          <ul className="feature-list">
+            {recommendations.length ? (
+              recommendations.map((item, index) => (
+                <li key={index}>{topicLabel(item)}</li>
+              ))
+            ) : (
+              <li>Recommendation belum tersedia.</li>
+            )}
+          </ul>
         </article>
       </section>
 
