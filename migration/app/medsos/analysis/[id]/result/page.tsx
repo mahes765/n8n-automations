@@ -104,17 +104,27 @@ export default async function MedsosResultPage({ params }: { params: Promise<{ i
       <section className="two-column">
         <article className="card stack">
           <span className="eyebrow">Audience Insight</span>
-          <pre className="json-preview">{JSON.stringify(result.audience_insight || {}, null, 2)}</pre>
-        </article>
-        <article className="card stack">
-          <span className="eyebrow">Recommendations</span>
-          <ul className="feature-list">
-            {recommendations.length ? (
-              recommendations.map((item, index) => <li key={index}>{topicLabel(item)}</li>)
+          <div className="flex flex-col gap-3">
+            {Object.entries(result.audience_insight || {}).length ? (
+              Object.entries(result.audience_insight || {}).map(([key, value]) => (
+                <div
+                  key={key}
+                  className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm"
+                >
+                  <strong className="capitalize">
+                    {key.replace(/_/g, " ")}:
+                  </strong>{" "}
+                  {Array.isArray(value)
+                    ? value.join(", ")
+                    : typeof value === "object"
+                      ? JSON.stringify(value)
+                      : String(value)}
+                </div>
+              ))
             ) : (
-              <li>Recommendation belum tersedia.</li>
+              <p>Audience insight belum tersedia.</p>
             )}
-          </ul>
+          </div>
         </article>
       </section>
 

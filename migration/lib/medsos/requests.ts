@@ -2,11 +2,11 @@ import { appUrl } from "@/lib/env";
 import { chargeMedsosQuota, getActiveMedsosEntitlement } from "@/lib/medsos/entitlements";
 import { supabaseAdmin } from "@/lib/supabase";
 import type {
-  MedsosAnalysisResult,
-  MedsosPlatform,
-  MedsosRequest,
-  MedsosRequestStatus,
-  User,
+    MedsosAnalysisResult,
+    MedsosPlatform,
+    MedsosRequest,
+    MedsosRequestStatus,
+    User,
 } from "@/lib/types";
 
 function parseJsonString(value: unknown): unknown {
@@ -42,6 +42,43 @@ function asJsonArray(value: unknown, fallback: unknown[] = []): unknown[] {
 function asJsonValue(value: unknown, fallback: unknown = null): unknown {
   const parsed = parseJsonString(value);
   return parsed === undefined ? fallback : parsed;
+}
+
+function firstNestedRecord(value: unknown): Record<string, unknown> | null {
+  if (Array.isArray(value)) {
+    const firstValue = value[0];
+
+    if (firstValue && typeof firstValue === "object" && !Array.isArray(firstValue)) {
+      return firstValue as Record<string, unknown>;
+    }
+
+    return null;
+  }
+
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  return null;
+}
+
+export function normalizeMedsosRequestLifecycle(
+  request: MedsosRequest,
+  analysisResultRelation?: unknown,
+): MedsosRequest {
+  const hasAnalysisResult = Boolean(firstNestedRecord(analysisResultRelation)?.id);
+
+  if (request.status === "completed" || !hasAnalysisResult) {
+    return request;
+  }
+
+  return {
+    ...request,
+    status: "completed",
+    progress_percent: 100,
+    current_step: "Report completed",
+    completed_at: request.completed_at || request.updated_at,
+  };
 }
 
 const platformHosts: Record<MedsosPlatform, string[]> = {
@@ -88,6 +125,7 @@ export async function createMedsosRequest(
       status: "queued",
       progress_percent: 5,
       current_step: "Request received",
+      quota_charged: false,
     })
     .select()
     .single();
@@ -167,7 +205,7 @@ export async function dispatchMedsosRequestToN8n(request: MedsosRequest): Promis
 export async function getOwnedMedsosRequest(userId: number, requestId: number): Promise<MedsosRequest | null> {
   const { data, error } = await supabaseAdmin
     .from("medsos_requests")
-    .select("*")
+    .select("*, medsos_analysis_results(id)")
     .eq("id", requestId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -176,7 +214,15 @@ export async function getOwnedMedsosRequest(userId: number, requestId: number): 
     throw error;
   }
 
-  return data as MedsosRequest | null;
+  if (!data) {
+    return null;
+  }
+
+  const { medsos_analysis_results: analysisResultRelation, ...request } = data as MedsosRequest & {
+    medsos_analysis_results?: unknown;
+  };
+
+  return normalizeMedsosRequestLifecycle(request, analysisResultRelation);
 }
 
 export async function getMedsosRequestEvents(requestId: number) {
@@ -204,7 +250,13 @@ export async function getMedsosHistory(userId: number) {
     throw error;
   }
 
-  return data || [];
+  return (data || []).map((item) => {
+    const { medsos_analysis_results: analysisResultRelation, ...request } = item as MedsosRequest & {
+      medsos_analysis_results?: unknown;
+    };
+
+    return normalizeMedsosRequestLifecycle(request, analysisResultRelation);
+  });
 }
 
 export async function getMedsosResult(
@@ -228,7 +280,7 @@ export async function getMedsosResult(
   }
 
   return {
-    request,
+    request: normalizeMedsosRequestLifecycle(request, data),
     result: data as MedsosAnalysisResult | null,
   };
 }
@@ -242,6 +294,7 @@ export async function updateMedsosRequestStatus(
     error_code?: string | null;
     error_message?: string | null;
     n8n_execution_id?: string | null;
+    quota_charged?: boolean;
   },
 ): Promise<void> {
   const now = new Date().toISOString();
@@ -295,7 +348,7 @@ export async function saveMedsosResult(
   // Get request with entitlement_id for quota charging
   const { data: requestData, error: requestError } = await supabaseAdmin
     .from("medsos_requests")
-    .select("entitlement_id")
+    .select("entitlement_id, status, quota_charged")
     .eq("id", requestId)
     .single();
 
@@ -327,14 +380,30 @@ export async function saveMedsosResult(
     throw error;
   }
 
-  // CHARGE QUOTA AFTER analysis is complete (not before)
-  await chargeMedsosQuota(requestData.entitlement_id);
+  const request = requestData as Pick<MedsosRequest, "status" | "quota_charged"> & {
+    entitlement_id: number;
+  };
 
-  await updateMedsosRequestStatus(requestId, {
-    status: "completed",
-    progress_percent: 100,
-    current_step: "Report completed",
-  });
+  if (request.status !== "completed") {
+    await updateMedsosRequestStatus(requestId, {
+      status: "completed",
+      progress_percent: 100,
+      current_step: "Report completed",
+    });
+  }
+
+  if (!request.quota_charged) {
+    await chargeMedsosQuota(request.entitlement_id);
+
+    const { error: quotaUpdateError } = await supabaseAdmin
+      .from("medsos_requests")
+      .update({ quota_charged: true })
+      .eq("id", requestId);
+
+    if (quotaUpdateError) {
+      throw quotaUpdateError;
+    }
+  }
 }
 
 export async function addMedsosRequestEvent(

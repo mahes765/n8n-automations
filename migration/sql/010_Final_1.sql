@@ -107,7 +107,6 @@ CREATE TABLE public.medsos_requests (
   callback_token text NOT NULL DEFAULT encode(gen_random_bytes(24), 'hex'::text),
   retry_count integer NOT NULL DEFAULT 0 CHECK (retry_count >= 0),
   max_retries integer NOT NULL DEFAULT 3 CHECK (max_retries >= 0),
-  quota_charged boolean NOT NULL DEFAULT true,
   requested_at timestamp with time zone NOT NULL DEFAULT now(),
   started_at timestamp with time zone,
   completed_at timestamp with time zone,
@@ -120,6 +119,7 @@ CREATE TABLE public.medsos_requests (
   ig_username text,
   apify_task_id text,
   scrape_cache_used boolean DEFAULT false,
+  quota_charged boolean NOT NULL DEFAULT false,
   CONSTRAINT medsos_requests_pkey PRIMARY KEY (id),
   CONSTRAINT medsos_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
   CONSTRAINT medsos_requests_entitlement_id_fkey FOREIGN KEY (entitlement_id) REFERENCES public.medsos_entitlements(id)
