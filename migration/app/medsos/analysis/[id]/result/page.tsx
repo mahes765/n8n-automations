@@ -101,7 +101,7 @@ export default async function MedsosResultPage({ params }: { params: Promise<{ i
         </article>
       </section>
 
-      <section className="two-column">
+      <section className="single-column">
         <article className="card stack">
           <span className="eyebrow">Audience Insight</span>
 
@@ -110,7 +110,7 @@ export default async function MedsosResultPage({ params }: { params: Promise<{ i
               Object.entries(result.audience_insight || {}).map(([key, value]) => (
                 <div
                   key={key}
-                  className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm leading-6"
+                  className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm leading-6"
                 >
                   <strong className="capitalize">
                     {key.replace(/_/g, " ")}:
@@ -127,24 +127,26 @@ export default async function MedsosResultPage({ params }: { params: Promise<{ i
             )}
           </div>
         </article>
+      </section>
 
+      <section className="single-column">
         <article className="card stack">
           <span className="eyebrow">Recommendations</span>
 
-          <div className="flex flex-col gap-3">
-            {recommendations.length ? (
-              recommendations.map((item, index) => (
-                <div
+          {recommendations.length ? (
+            <ul className="flex flex-col gap-3">
+              {recommendations.map((item, index) => (
+                <li
                   key={index}
                   className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm leading-6"
                 >
                   {topicLabel(item).replace(/\*\*/g, "")}
-                </div>
-              ))
-            ) : (
-              <p>Recommendation belum tersedia.</p>
-            )}
-          </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>Recommendation belum tersedia.</p>
+          )}
         </article>
       </section>
 
