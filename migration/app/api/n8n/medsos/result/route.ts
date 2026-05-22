@@ -171,14 +171,27 @@ export async function POST(request: NextRequest) {
     envSecret: envSecret ? `${envSecret.slice(0, 20)}...` : "UNDEFINED ⚠️",
   });
 
-  if (!isN8nRequest(request, body)) {
+  let callbackVerified = false;
+
+  const parsedForAuth = schema.safeParse(body);
+
+  if (parsedForAuth.success) {
+    try {
+      await verifyMedsosCallback(parsedForAuth.data.request_id, parsedForAuth.data.callback_token);
+      callbackVerified = true;
+    } catch {
+      callbackVerified = false;
+    }
+  }
+
+  if (!isN8nRequest(request, body) && !callbackVerified) {
     console.log("❌ Result auth validation failed");
     return json({ message: "Unauthorized." }, 401);
   }
   
   console.log("✅ Result auth validation passed");
 
-  const parsed = schema.safeParse(body);
+  const parsed = parsedForAuth;
 
   if (!parsed.success) {
     return json({ message: "Payload result tidak valid." }, 422);

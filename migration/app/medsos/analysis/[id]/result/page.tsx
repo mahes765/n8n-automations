@@ -88,20 +88,7 @@ export default async function MedsosResultPage({ params }: { params: Promise<{ i
         <p className="summary-text">{result.summary || "Summary belum tersedia."}</p>
       </section>
 
-      <section className="two-column">
-        <article className="card stack">
-          <span className="eyebrow">Sentiment Analysis</span>
-          {["positive", "neutral", "negative"].map((key) => (
-            <div className="chart-row" key={key}>
-              <span>{key}</span>
-              <div className="progress-track">
-                <div className="progress-fill" style={{ width: `${Number(sentiment[key] || 0)}%` }} />
-              </div>
-              <strong>{Number(sentiment[key] || 0)}%</strong>
-            </div>
-          ))}
-        </article>
-
+      <section className="single-column">
         <article className="card stack">
           <span className="eyebrow">Top Topics</span>
           <div className="tag-cloud">

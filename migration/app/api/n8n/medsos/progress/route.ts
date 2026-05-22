@@ -14,26 +14,7 @@ const schema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  // DEBUG: Log auth details
-  const authHeader = request.headers.get("authorization");
-  const secretHeader = request.headers.get("x-n8n-secret");
-  const envSecret = process.env.N8N_SHARED_SECRET;
-  
   const body = await request.json();
-  
-  console.log("🔍 Auth Debug:", {
-    authHeader: authHeader ? `Bearer ${authHeader.slice(7, 20)}...` : "missing",
-    secretHeader: secretHeader ? `${secretHeader.slice(0, 20)}...` : "missing",
-    bodySecret: body.n8n_secret ? `${body.n8n_secret.slice(0, 20)}...` : "missing",
-    envSecret: envSecret ? `${envSecret.slice(0, 20)}...` : "UNDEFINED ⚠️",
-  });
-
-  if (!isN8nRequest(request, body)) {
-    console.log("❌ Auth validation failed");
-    return json({ message: "Unauthorized." }, 401);
-  }
-  
-  console.log("✅ Auth validation passed");
 
   const parsed = schema.safeParse(body);
 
@@ -41,7 +22,34 @@ export async function POST(request: NextRequest) {
     return json({ message: "Payload progress tidak valid." }, 422);
   }
 
-  await verifyMedsosCallback(parsed.data.request_id, parsed.data.callback_token);
+  let callbackVerified = false;
+
+  try {
+    await verifyMedsosCallback(parsed.data.request_id, parsed.data.callback_token);
+    callbackVerified = true;
+  } catch {
+    callbackVerified = false;
+  }
+
+  // DEBUG: Log auth details
+  const authHeader = request.headers.get("authorization");
+  const secretHeader = request.headers.get("x-n8n-secret");
+  const envSecret = process.env.N8N_SHARED_SECRET;
+
+  console.log("🔍 Auth Debug:", {
+    authHeader: authHeader ? `Bearer ${authHeader.slice(7, 20)}...` : "missing",
+    secretHeader: secretHeader ? `${secretHeader.slice(0, 20)}...` : "missing",
+    bodySecret: body.n8n_secret ? `${body.n8n_secret.slice(0, 20)}...` : "missing",
+    envSecret: envSecret ? `${envSecret.slice(0, 20)}...` : "UNDEFINED ⚠️",
+  });
+
+  if (!isN8nRequest(request, body) && !callbackVerified) {
+    console.log("❌ Auth validation failed");
+    return json({ message: "Unauthorized." }, 401);
+  }
+  
+  console.log("✅ Auth validation passed");
+
   await updateMedsosRequestStatus(parsed.data.request_id, {
     status: parsed.data.status,
     progress_percent: parsed.data.progress_percent,

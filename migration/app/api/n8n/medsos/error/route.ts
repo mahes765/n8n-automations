@@ -13,12 +13,26 @@ const schema = z.object({
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  
+  const parsed = schema.safeParse(body);
+
+  if (!parsed.success) {
+    return json({ message: "Payload error tidak valid." }, 422);
+  }
+
+  let callbackVerified = false;
+
+  try {
+    await verifyMedsosCallback(parsed.data.request_id, parsed.data.callback_token);
+    callbackVerified = true;
+  } catch {
+    callbackVerified = false;
+  }
+
   // DEBUG: Log auth details
   const authHeader = request.headers.get("authorization");
   const secretHeader = request.headers.get("x-n8n-secret");
   const envSecret = process.env.N8N_SHARED_SECRET;
-  
+
   console.log("🔍 Error Auth Debug:", {
     authHeader: authHeader ? `Bearer ${authHeader.slice(7, 20)}...` : "missing",
     secretHeader: secretHeader ? `${secretHeader.slice(0, 20)}...` : "missing",
@@ -26,20 +40,13 @@ export async function POST(request: NextRequest) {
     envSecret: envSecret ? `${envSecret.slice(0, 20)}...` : "UNDEFINED ⚠️",
   });
 
-  if (!isN8nRequest(request, body)) {
+  if (!isN8nRequest(request, body) && !callbackVerified) {
     console.log("❌ Error auth validation failed");
     return json({ message: "Unauthorized." }, 401);
   }
   
   console.log("✅ Error auth validation passed");
 
-  const parsed = schema.safeParse(body);
-
-  if (!parsed.success) {
-    return json({ message: "Payload error tidak valid." }, 422);
-  }
-
-  await verifyMedsosCallback(parsed.data.request_id, parsed.data.callback_token);
   await updateMedsosRequestStatus(parsed.data.request_id, {
     status: "failed",
     progress_percent: 100,

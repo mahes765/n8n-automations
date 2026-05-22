@@ -1,8 +1,8 @@
 "use client";
 
+import type { MedsosRequest } from "@/lib/types";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { MedsosRequest } from "@/lib/types";
 
 type EventRow = {
   id: number;
@@ -15,11 +15,20 @@ type EventRow = {
 const steps = [
   "Request received",
   "Validating URL",
-  "Scraping social media",
+  "Scraping Instagram profile",
   "AI processing",
   "Generating report",
   "Report completed",
 ];
+
+const stepAliases: Record<string, string[]> = {
+  "Request received": ["request.created"],
+  "Validating URL": ["validating"],
+  "Scraping Instagram profile": ["scraping", "Scraping social media"],
+  "AI processing": ["ai_processing"],
+  "Generating report": ["generating_report"],
+  "Report completed": ["completed", "request.completed"],
+};
 
 export default function ProgressPoller({
   requestId,
@@ -56,6 +65,16 @@ export default function ProgressPoller({
   const completed = analysis.status === "completed";
   const failed = analysis.status === "failed";
 
+  const isStepDone = (step: string) => {
+    const aliases = stepAliases[step] || [];
+
+    return events.some((event) => {
+      const eventText = `${event.message || ""} ${event.step_name || ""} ${event.status || ""}`;
+
+      return eventText === step || eventText.includes(step) || aliases.some((alias) => eventText.includes(alias));
+    });
+  };
+
   return (
     <section className="card stack">
       <div className="row-between">
@@ -73,7 +92,7 @@ export default function ProgressPoller({
 
       <div className="timeline">
         {steps.map((step) => {
-          const done = events.some((event) => event.message === step || event.step_name === step);
+          const done = isStepDone(step);
           const active = analysis.current_step === step;
 
           return (
